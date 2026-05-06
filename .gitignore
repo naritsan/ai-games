@@ -11,3 +11,6 @@ Thumbs.db
 # Local dev
 node_modules/
 .env
+
+# Claude Code local settings
+.claude/settings.local.json
