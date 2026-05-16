@@ -399,24 +399,36 @@ function updateCreatures(dt) {
     const energyRatio = c.energy / 1.5;
     const speedMod = elderly ? 0.5 : 1.0;
 
-    // Frantic when hungry but still have energy
-    if (c.satiety < 0.3 && energyRatio > 0.1 && c.state !== 'frantic' && c.state !== 'eating') {
-      c.state = 'frantic';
-      c.wanderTarget = null;
+    // Torpor: satiety empty + energy critically low → near-death hibernation
+    if (c.satiety <= 0 && energyRatio < 0.05 && c.state !== 'torpor' && c.state !== 'eating') {
+      c.state = 'torpor';
     }
-    if (c.state === 'frantic' && (c.satiety > 0.5 || energyRatio < 0.08)) {
-      c.state = energyRatio < 0.08 ? 'lethargic' : 'exploring';
+    if (c.state === 'torpor' && (c.satiety > 0.2 || energyRatio > 0.12)) {
+      c.state = 'exploring';
       c.stateTimer = 1;
     }
 
-    // Lethargic when truly dying
-    if (energyRatio < 0.08 && c.state !== 'lethargic' && c.state !== 'eating') {
+    // Frantic when hungry but still have energy
+    if (c.satiety < 0.3 && energyRatio > 0.08 && c.state !== 'frantic' && c.state !== 'eating' && c.state !== 'torpor') {
+      c.state = 'frantic';
+      c.wanderTarget = null;
+    }
+    if (c.state === 'frantic' && (c.satiety > 0.5 || energyRatio < 0.05)) {
+      c.state = energyRatio < 0.05 ? 'torpor' : 'exploring';
+      c.stateTimer = 1;
+    }
+
+    // Lethargic when energy low but not torpor
+    if (energyRatio < 0.1 && c.state !== 'lethargic' && c.state !== 'eating' && c.state !== 'torpor' && c.state !== 'frantic') {
       c.state = 'lethargic';
       c.stateTimer = 0;
     }
-    if (c.state === 'lethargic' && energyRatio > 0.3 && c.satiety > 0.3) {
+    if (c.state === 'lethargic' && energyRatio > 0.25 && c.satiety > 0.3) {
       c.state = 'exploring';
       c.stateTimer = 1 + Math.random() * 2;
+    }
+    if (c.state === 'lethargic' && c.satiety <= 0 && energyRatio < 0.05) {
+      c.state = 'torpor';
     }
 
     // Check nearby food (unclaimed only)
@@ -500,11 +512,20 @@ function updateCreatures(dt) {
         }
         break;
 
+      case 'torpor':
+        speed = c.baseSpeed * 0.03;
+        if (!c.wanderTarget || c.pos.distanceTo(c.wanderTarget) < 0.05) {
+          c.wanderTarget = new THREE.Vector3(
+            c.pos.x + (Math.random() - 0.5) * 0.2, 0.15,
+            c.pos.z + (Math.random() - 0.5) * 0.2
+          );
+        }
+        targetAngle = angleToward(c.pos, c.wanderTarget);
+        break;
+
       case 'frantic':
-        // Wild erratic dashing across the arena
         speed = c.baseSpeed * 2.5 * speedMod;
         if (!c.wanderTarget || c.pos.distanceTo(c.wanderTarget) < 0.5 || Math.random() < 0.05) {
-          // Pick targets far away, random directions
           const angle = Math.random() * Math.PI * 2;
           const dist = 3 + Math.random() * (ARENA_HALF - 1);
           c.wanderTarget = new THREE.Vector3(Math.cos(angle) * dist, 0.15, Math.sin(angle) * dist);
@@ -525,7 +546,7 @@ function updateCreatures(dt) {
     let angleDiff = targetAngle - c.heading;
     while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
     while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
-    const turnRate = c.state === 'frantic' ? 7.0 : c.state === 'seeking' ? 5.0 : 3.0 + Math.random() * 0.5;
+    const turnRate = c.state === 'frantic' ? 7.0 : c.state === 'seeking' ? 5.0 : c.state === 'torpor' ? 0.3 : 3.0 + Math.random() * 0.5;
     c.heading += Math.sign(angleDiff) * Math.min(Math.abs(angleDiff), turnRate * dt);
 
     if (speed > 0) {
@@ -572,18 +593,21 @@ function updateCreatures(dt) {
 
     // Satiety & energy decay
     c.satiety = Math.max(0, c.satiety - dt * c.satietyDecay);
-    const hungerMult = c.satiety < 0.3 ? 1.5 : 1.0;
-    c.energy -= dt * 0.006 * hungerMult * (elderly ? 1.4 : 1.0);
-    if (speed > 0 && c.state !== 'frantic') c.energy -= dt * speed * 0.0015;
+    if (c.state === 'torpor') {
+      c.energy -= dt * 0.0008; // near-zero consumption
+    } else {
+      const hungerMult = c.satiety < 0.3 ? 1.5 : 1.0;
+      c.energy -= dt * 0.006 * hungerMult * (elderly ? 1.4 : 1.0);
+      if (speed > 0 && c.state !== 'frantic') c.energy -= dt * speed * 0.0015;
+    }
 
     // ── Visual ──────────────────────────────────────
     const growthSize = 0.5 + c.growth * 0.7;
     const energyScale = 0.7 + c.energy * 0.4;
     const flashBoost = c.eatFlash > 0 ? 1 + c.eatFlash * 0.5 : 1;
     let scale = growthSize * energyScale * flashBoost;
-    if (c.state === 'resting') {
-      scale *= 0.95 + Math.sin(c.phase * 3) * 0.05;
-    }
+    if (c.state === 'resting') scale *= 0.95 + Math.sin(c.phase * 3) * 0.05;
+    if (c.state === 'torpor') scale *= 0.6;
     c.mesh.scale.setScalar(scale);
 
     const radius = 0.2 * scale;
@@ -592,6 +616,8 @@ function updateCreatures(dt) {
     const t = Math.max(0, Math.min(1, c.energy / 1.5));
     c.mesh.material.color.setRGB(1 - t, t * 0.85, 0);
     c.mesh.material.emissive.setRGB((1 - t) * 0.3, t * 0.22, 0);
+    c.mesh.material.opacity = c.state === 'torpor' ? 0.4 : 1;
+    c.mesh.material.transparent = c.state === 'torpor';
 
     // Death
     if (c.energy <= 0) {
