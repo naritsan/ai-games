@@ -90,15 +90,15 @@ scene.add(stars);
 
 // ── Time-of-Day Presets ─────────────────────────
 const TIME_KEYFRAMES = [
-  { h: 0,  bg: '#08081a', fog: '#08081a', amb: '#223355', ambI: 0.12, sun: '#334466', sunI: 0.0, moonI: 1.0 },
-  { h: 5,  bg: '#1a1530', fog: '#1a1530', amb: '#334466', ambI: 0.15, sun: '#886644', sunI: 0.1, moonI: 0.6 },
+  { h: 0,  bg: '#0f0f24', fog: '#0f0f24', amb: '#334466', ambI: 0.22, sun: '#334466', sunI: 0.0, moonI: 1.2 },
+  { h: 5,  bg: '#1a1530', fog: '#1a1530', amb: '#445577', ambI: 0.25, sun: '#886644', sunI: 0.1, moonI: 0.8 },
   { h: 6,  bg: '#d49060', fog: '#c8a090', amb: '#886655', ambI: 0.35, sun: '#ffaa66', sunI: 0.6, moonI: 0.0 },
   { h: 8,  bg: '#a0d8f0', fog: '#a0c8e0', amb: '#ffffff', ambI: 0.45, sun: '#ffffdd', sunI: 1.0, moonI: 0.0 },
   { h: 12, bg: '#7ec8e3', fog: '#a0c8e0', amb: '#ffffff', ambI: 0.5,  sun: '#ffffff', sunI: 1.2, moonI: 0.0 },
   { h: 16, bg: '#a0d0e8', fog: '#a0c0d8', amb: '#ffffff', ambI: 0.45, sun: '#ffeedd', sunI: 1.0, moonI: 0.0 },
   { h: 18, bg: '#e88850', fog: '#d09080', amb: '#996655', ambI: 0.35, sun: '#ff8844', sunI: 0.6, moonI: 0.0 },
-  { h: 20, bg: '#1a1030', fog: '#1a1030', amb: '#223355', ambI: 0.15, sun: '#443355', sunI: 0.05, moonI: 0.5 },
-  { h: 24, bg: '#08081a', fog: '#08081a', amb: '#223355', ambI: 0.12, sun: '#334466', sunI: 0.0, moonI: 1.0 },
+  { h: 20, bg: '#1a1030', fog: '#1a1030', amb: '#334466', ambI: 0.25, sun: '#443355', sunI: 0.05, moonI: 0.7 },
+  { h: 24, bg: '#0f0f24', fog: '#0f0f24', amb: '#334466', ambI: 0.22, sun: '#334466', sunI: 0.0, moonI: 1.2 },
 ];
 
 function lerpColor(a, b, t) {
@@ -128,12 +128,12 @@ function updateTimeOfDay() {
   ambient.intensity = lerpNum(prev.ambI, next.ambI, t);
   sun.color = lerpColor(prev.sun, next.sun, t);
   sun.intensity = lerpNum(prev.sunI, next.sunI, t);
-  moonLight.intensity = lerpNum(prev.moonI, next.moonI, t);
+  moonLight.intensity = lerpNum(prev.moonI, next.moonI, t) * 3;
 
-  // Sun angle: rises in east (x+), peaks at noon, sets in west (x-)
-  const sunAngle = (h / 24) * Math.PI * 2 - Math.PI / 2;
+  // Sun angle: rises in east (-X side), peaks overhead, sets in west (+X side)
+  const sunAngle = -(h / 24) * Math.PI * 2 + Math.PI / 2;
   const sunDist = 8;
-  sun.position.set(Math.cos(sunAngle) * sunDist, Math.sin(sunAngle) * sunDist + 2, -2);
+  sun.position.set(Math.cos(sunAngle) * sunDist, Math.sin(sunAngle) * sunDist + 2, -3);
 
   // Sun mesh follows directional light, visible when above horizon
   const sunY = Math.sin(sunAngle);
