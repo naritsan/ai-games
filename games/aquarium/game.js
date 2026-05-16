@@ -342,6 +342,15 @@ window.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
     document.getElementById('details-overlay').classList.add('hidden');
   }
+  if (e.key === 'm' || e.key === 'M') {
+    const overlay = document.getElementById('details-overlay');
+    if (overlay.classList.contains('hidden')) {
+      refreshDetails();
+      overlay.classList.remove('hidden');
+    } else {
+      overlay.classList.add('hidden');
+    }
+  }
 });
 
 // Click mode toggle
