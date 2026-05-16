@@ -680,7 +680,7 @@ document.getElementById('click-mode-btn').addEventListener('click', () => {
 
 // ── UI State ───────────────────────────────────
 let paused = false;
-const SPEED_OPTIONS = [0.5, 1, 5, 10];
+const SPEED_OPTIONS = [0.5, 1, 2, 5, 10];
 let speedIdx = 1; // default: ×1
 let speedMultiplier = SPEED_OPTIONS[speedIdx];
 let elapsedSeconds = 0;
