@@ -13,6 +13,11 @@ const scene = new THREE.Scene();
 scene.background = new THREE.Color('#7ec8e3');
 scene.fog = new THREE.Fog('#7ec8e3', 15, 40);
 
+// ── Time System ─────────────────────────────────
+const SECONDS_PER_DAY = 120;
+let gameHours = 7;  // start at morning
+let dayCount = 1;
+
 const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.5, 50);
 camera.position.set(6, 8, 9);
 camera.lookAt(0, 0.3, 0);
@@ -27,10 +32,64 @@ controls.maxPolarAngle = 2.2;
 controls.update();
 
 // ── Lighting ───────────────────────────────────
-scene.add(new THREE.AmbientLight('#ffffff', 0.4));
+const ambient = new THREE.AmbientLight('#ffffff', 0.4);
+scene.add(ambient);
 const sun = new THREE.DirectionalLight('#ffffff', 1.0);
 sun.position.set(5, 8, 3);
 scene.add(sun);
+
+// Night fill light (dim blue, faces upward for subtle ground visibility)
+const moonLight = new THREE.PointLight('#334466', 3, 12, 2);
+moonLight.position.set(0, 4, 0);
+scene.add(moonLight);
+
+// ── Time-of-Day Presets ─────────────────────────
+const TIME_KEYFRAMES = [
+  { h: 0,  bg: '#08081a', fog: '#08081a', amb: '#223355', ambI: 0.12, sun: '#334466', sunI: 0.0, moonI: 1.0 },
+  { h: 5,  bg: '#1a1530', fog: '#1a1530', amb: '#334466', ambI: 0.15, sun: '#886644', sunI: 0.1, moonI: 0.6 },
+  { h: 6,  bg: '#d49060', fog: '#c8a090', amb: '#886655', ambI: 0.35, sun: '#ffaa66', sunI: 0.6, moonI: 0.0 },
+  { h: 8,  bg: '#a0d8f0', fog: '#a0c8e0', amb: '#ffffff', ambI: 0.45, sun: '#ffffdd', sunI: 1.0, moonI: 0.0 },
+  { h: 12, bg: '#7ec8e3', fog: '#a0c8e0', amb: '#ffffff', ambI: 0.5,  sun: '#ffffff', sunI: 1.2, moonI: 0.0 },
+  { h: 16, bg: '#a0d0e8', fog: '#a0c0d8', amb: '#ffffff', ambI: 0.45, sun: '#ffeedd', sunI: 1.0, moonI: 0.0 },
+  { h: 18, bg: '#e88850', fog: '#d09080', amb: '#996655', ambI: 0.35, sun: '#ff8844', sunI: 0.6, moonI: 0.0 },
+  { h: 20, bg: '#1a1030', fog: '#1a1030', amb: '#223355', ambI: 0.15, sun: '#443355', sunI: 0.05, moonI: 0.5 },
+  { h: 24, bg: '#08081a', fog: '#08081a', amb: '#223355', ambI: 0.12, sun: '#334466', sunI: 0.0, moonI: 1.0 },
+];
+
+function lerpColor(a, b, t) {
+  const ac = new THREE.Color(a), bc = new THREE.Color(b);
+  return ac.lerp(bc, t);
+}
+
+function lerpNum(a, b, t) { return a + (b - a) * t; }
+
+function updateTimeOfDay() {
+  const h = gameHours;
+  // Find surrounding keyframes
+  let prev = TIME_KEYFRAMES[0], next = TIME_KEYFRAMES[TIME_KEYFRAMES.length - 1];
+  for (let i = 0; i < TIME_KEYFRAMES.length - 1; i++) {
+    if (h >= TIME_KEYFRAMES[i].h && h <= TIME_KEYFRAMES[i + 1].h) {
+      prev = TIME_KEYFRAMES[i];
+      next = TIME_KEYFRAMES[i + 1];
+      break;
+    }
+  }
+  const range = next.h - prev.h;
+  const t = range > 0 ? (h - prev.h) / range : 0;
+
+  scene.background = lerpColor(prev.bg, next.bg, t);
+  scene.fog.color = lerpColor(prev.fog, next.fog, t);
+  ambient.color = lerpColor(prev.amb, next.amb, t);
+  ambient.intensity = lerpNum(prev.ambI, next.ambI, t);
+  sun.color = lerpColor(prev.sun, next.sun, t);
+  sun.intensity = lerpNum(prev.sunI, next.sunI, t);
+  moonLight.intensity = lerpNum(prev.moonI, next.moonI, t);
+
+  // Sun angle: rises in east (x+), peaks at noon, sets in west (x-)
+  const sunAngle = (h / 24) * Math.PI * 2 - Math.PI / 2;
+  const sunDist = 8;
+  sun.position.set(Math.cos(sunAngle) * sunDist, Math.sin(sunAngle) * sunDist + 2, -2);
+}
 
 // ── Arena Ground ────────────────────────────────
 const ARENA_HALF = 5;
@@ -541,6 +600,9 @@ document.getElementById('reset-btn').addEventListener('click', () => {
   paused = false;
   speedMultiplier = 1;
   elapsedSeconds = 0;
+  gameHours = 7;
+  dayCount = 1;
+  updateTimeOfDay();
   document.getElementById('pause-btn').textContent = 'Pause';
   document.getElementById('speed-btn').textContent = 'Speed x1';
 });
@@ -555,9 +617,22 @@ window.addEventListener('resize', () => {
 // ── Game Loop ──────────────────────────────────
 const clock = new THREE.Clock();
 
+function formatTime(h) {
+  const hr = Math.floor(h) % 24;
+  const min = Math.floor((h % 1) * 60);
+  return `${String(hr).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
+}
+
+function timePeriod(h) {
+  if (h >= 5 && h < 8) return 'Dawn';
+  if (h >= 8 && h < 17) return 'Day';
+  if (h >= 17 && h < 20) return 'Dusk';
+  return 'Night';
+}
+
 function updateHUD() {
   document.getElementById('info').textContent =
-    `Creatures: ${creatures.length} | Time: ${Math.floor(elapsedSeconds)}s`;
+    `Day ${dayCount} | ${formatTime(gameHours)} (${timePeriod(gameHours)}) | Creatures: ${creatures.length}`;
   updateStatusPanel();
 }
 
@@ -589,6 +664,16 @@ function animate() {
     updateNutrients(dt);
     updateCreatures(dt);
     elapsedSeconds += dt / speedMultiplier;
+    // Advance game time
+    const prevHours = gameHours;
+    gameHours += (dt / speedMultiplier) / SECONDS_PER_DAY * 24;
+    if (gameHours >= 24) {
+      gameHours -= 24;
+      dayCount++;
+    }
+    if (Math.floor(gameHours) !== Math.floor(prevHours % 24)) {
+      updateTimeOfDay();
+    }
   }
 
   controls.update();
@@ -601,6 +686,7 @@ function animate() {
 }
 
 // ── Start ──────────────────────────────────────
+updateTimeOfDay();
 spawnCreature(new THREE.Vector3(0, 0.15, 0));
 console.log('Microcosm setup complete, starting animation');
 requestAnimationFrame(animate);
