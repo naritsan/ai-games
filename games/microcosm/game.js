@@ -27,7 +27,7 @@ controls.target.set(0, 0.3, 0);
 controls.enableDamping = true;
 controls.dampingFactor = 0.08;
 controls.minDistance = 2.5;
-controls.maxDistance = 10;
+controls.maxDistance = 20;
 controls.maxPolarAngle = 2.2;
 controls.update();
 
@@ -250,6 +250,25 @@ function updateNutrients(dt) {
     if (n.life < 5) {
       n.mesh.material.opacity = n.life / 5;
       n.mesh.material.transparent = true;
+    }
+  }
+
+  // Nutrient-nutrient repulsion (avoid stacking)
+  for (let i = 0; i < nutrients.length; i++) {
+    for (let j = i + 1; j < nutrients.length; j++) {
+      const a = nutrients[i], b = nutrients[j];
+      if (a.claimedBy || b.claimedBy) continue;
+      const dx = a.pos.x - b.pos.x;
+      const dz = a.pos.z - b.pos.z;
+      const dist = Math.sqrt(dx * dx + dz * dz);
+      const minDist = NUTRIENT_DEFS[a.size].radius + NUTRIENT_DEFS[b.size].radius + 0.05;
+      if (dist < minDist && dist > 0.001) {
+        const push = (minDist - dist) / dist * 0.5;
+        a.pos.x += dx * push;
+        a.pos.z += dz * push;
+        b.pos.x -= dx * push;
+        b.pos.z -= dz * push;
+      }
     }
   }
 }
