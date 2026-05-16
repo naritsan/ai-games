@@ -297,6 +297,14 @@ function spawnCreature(pos) {
   mesh.castShadow = true;
   scene.add(mesh);
 
+  // Perception ring
+  const ringGeo = new THREE.TorusGeometry(1, 0.02, 4, 24);
+  const ringMat = new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.15, depthWrite: false });
+  const perceptionRing = new THREE.Mesh(ringGeo, ringMat);
+  perceptionRing.rotation.x = -Math.PI / 2;
+  perceptionRing.position.y = 0.03;
+  mesh.add(perceptionRing);
+
   const baseSpeed = 0.5 + Math.random() * 0.7;
   creatures.push({
     pos: pos.clone(),
@@ -311,7 +319,8 @@ function spawnCreature(pos) {
     // Individual traits
     baseSpeed,
     satietyDecay: 0.08 + Math.random() * 0.04, // ~2 game hours to deplete
-    detectRange: 2.5 + Math.random() * 1.5,
+    detectRange: 3.5 + Math.random() * 2.0,
+    perceptionRing,
     reactionTime: 0.2 + Math.random() * 1.3,
     aggression: Math.random(), // 0=docile, 1=fierce
     // Growth & lifespan
@@ -324,6 +333,7 @@ function spawnCreature(pos) {
     satisfiedTimer: 0,
     wanderTarget: null,
   });
+  perceptionRing.scale.setScalar(creatures[creatures.length - 1].detectRange);
 }
 
 function updateCreatures(dt) {
@@ -548,7 +558,7 @@ function updateCreatures(dt) {
     let angleDiff = targetAngle - c.heading;
     while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
     while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
-    const turnRate = c.state === 'frantic' ? 7.0 : c.state === 'seeking' ? 5.0 : c.state === 'torpor' ? 0.3 : 3.0 + Math.random() * 0.5;
+    const turnRate = c.state === 'frantic' ? 7.0 : c.state === 'seeking' ? 8.0 : c.state === 'torpor' ? 0.3 : 3.0 + Math.random() * 0.5;
     c.heading += Math.sign(angleDiff) * Math.min(Math.abs(angleDiff), turnRate * dt);
 
     if (speed > 0) {
@@ -632,6 +642,9 @@ function updateCreatures(dt) {
     }
     c.mesh.material.opacity = c.state === 'torpor' ? 0.4 : 1;
     c.mesh.material.transparent = c.state === 'torpor';
+
+    // Perception ring — brighter when seeking/frantic
+    c.perceptionRing.material.opacity = (c.state === 'seeking' || c.state === 'frantic') ? 0.4 : 0.12;
 
     // Death
     if (c.energy <= 0) {
