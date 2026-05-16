@@ -296,6 +296,54 @@ renderer.domElement.addEventListener('click', (e) => {
   }
 });
 
+// ── Details Overlay ────────────────────────────
+function refreshDetails() {
+  const body = document.getElementById('details-body');
+  if (creatures.length === 0) {
+    body.innerHTML = '<div style="color:#666;text-align:center;padding:20px">No creatures alive</div>';
+    return;
+  }
+  let html = '';
+  for (let i = 0; i < creatures.length; i++) {
+    const c = creatures[i];
+    const t = Math.max(0, Math.min(1, c.energy / 1.5));
+    const r = Math.floor((1 - t) * 255);
+    const g = Math.floor(t * 200);
+    const pct = (c.energy * 100).toFixed(0);
+    html += `<div class="detail-card">
+      <div class="detail-header">
+        <div class="creature-dot" style="background:rgb(${r},${g},0);box-shadow:0 0 8px rgb(${r},${g},0)"></div>
+        <div class="detail-name">Creature #${i + 1}</div>
+      </div>
+      <div class="detail-grid">
+        <div>Vitality <span>${pct}%</span></div>
+        <div>Age <span>${Math.floor(c.age)}s</span></div>
+        <div>Energy <span>${c.energy.toFixed(3)}</span></div>
+        <div>Position <span>${c.pos.x.toFixed(1)}, ${c.pos.z.toFixed(1)}</span></div>
+        <div style="color:${pct > 30 ? '#888' : '#e44'}">Status <span>${pct > 50 ? 'Healthy' : pct > 20 ? 'Weakening' : 'Dying'}</span></div>
+        <div>Food eaten <span>${Math.max(0, Math.floor((c.energy - 1.0) / 0.15))}</span></div>
+        <div class="detail-bar-bg"><div class="detail-bar-fill" style="width:${pct}%;background:rgb(${r},${g},0)"></div></div>
+      </div>
+    </div>`;
+  }
+  body.innerHTML = html;
+}
+
+document.getElementById('details-btn').addEventListener('click', () => {
+  refreshDetails();
+  document.getElementById('details-overlay').classList.remove('hidden');
+});
+
+document.getElementById('details-close-btn').addEventListener('click', () => {
+  document.getElementById('details-overlay').classList.add('hidden');
+});
+
+window.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    document.getElementById('details-overlay').classList.add('hidden');
+  }
+});
+
 // Click mode toggle
 document.getElementById('click-mode-btn').addEventListener('click', () => {
   clickMode = clickMode === 'feed' ? 'look' : 'feed';
@@ -406,6 +454,9 @@ function animate() {
   controls.update();
   renderer.render(scene, camera);
   updateHUD();
+  if (!document.getElementById('details-overlay').classList.contains('hidden')) {
+    refreshDetails();
+  }
   requestAnimationFrame(animate);
 }
 
