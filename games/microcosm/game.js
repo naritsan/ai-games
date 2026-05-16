@@ -149,6 +149,7 @@ function spawnCreature(pos) {
     phase: Math.random() * Math.PI * 2,
     mesh,
     eatFlash: 0,
+    foodNoticeAt: 0,
   });
 }
 
@@ -163,7 +164,7 @@ function updateCreatures(dt) {
     let moveDir = null;
     let speed = 0.8; // base wander speed
 
-    // Check for nearby food — overrides wander
+    // Check for nearby food with delayed reaction
     let nearestDist = 3.0;
     let nearestNutrient = null;
     for (const n of nutrients) {
@@ -175,16 +176,25 @@ function updateCreatures(dt) {
     }
 
     if (nearestNutrient) {
-      // Move toward food with urgency
-      moveDir = new THREE.Vector3().copy(nearestNutrient.pos).sub(c.pos);
-      moveDir.y = 0;
-      const dist = moveDir.length();
-      if (dist > 0.05) {
-        moveDir.normalize();
-        speed = 1.2 + (1 - Math.min(dist, 3.0) / 3.0) * 1.5;
+      // Delayed reaction: only notice food after a random delay
+      if (c.foodNoticeAt === 0) {
+        c.foodNoticeAt = c.age + 0.3 + Math.random() * 1.2;
+      }
+      if (c.age >= c.foodNoticeAt) {
+        moveDir = new THREE.Vector3().copy(nearestNutrient.pos).sub(c.pos);
+        moveDir.y = 0;
+        const dist = moveDir.length();
+        if (dist > 0.05) {
+          moveDir.normalize();
+          speed = 1.2 + (1 - Math.min(dist, 3.0) / 3.0) * 1.5;
+        }
       }
     } else {
-      // Wander: pick random target, move toward it
+      c.foodNoticeAt = 0;
+    }
+
+    // Wander when not seeking food
+    if (!moveDir) {
       if (!c.wanderTarget || c.pos.distanceTo(c.wanderTarget) < 0.3) {
         c.wanderTarget = new THREE.Vector3(
           (Math.random() - 0.5) * (ARENA_HALF - 1) * 2,
@@ -200,12 +210,27 @@ function updateCreatures(dt) {
       }
     }
 
+    // Creature-creature collision avoidance
+    const avoidance = new THREE.Vector3();
+    for (let j = 0; j < creatures.length; j++) {
+      if (i === j) continue;
+      const other = creatures[j];
+      const d = c.pos.distanceTo(other.pos);
+      const minDist = 0.55; // sum of typical radii + buffer
+      if (d < minDist && d > 0.001) {
+        const push = new THREE.Vector3().copy(c.pos).sub(other.pos).normalize();
+        push.multiplyScalar((minDist - d) * 2.0);
+        push.y = 0;
+        avoidance.add(push);
+      }
+    }
+
     // Move directly (no inertia)
     if (moveDir) {
       const jitterX = (Math.random() - 0.5) * 0.3;
       const jitterZ = (Math.random() - 0.5) * 0.3;
-      c.pos.x += (moveDir.x * speed + jitterX) * dt;
-      c.pos.z += (moveDir.z * speed + jitterZ) * dt;
+      c.pos.x += (moveDir.x * speed + avoidance.x + jitterX) * dt;
+      c.pos.z += (moveDir.z * speed + avoidance.z + jitterZ) * dt;
     }
 
     // Subtle vertical bob
@@ -220,6 +245,7 @@ function updateCreatures(dt) {
         c.energy = Math.min(1.5, c.energy + 0.15);
         c.eatFlash = 0.5;
         c.wanderTarget = null;
+        c.foodNoticeAt = 0;
         scene.remove(n.mesh);
         nutrients.splice(j, 1);
       }
