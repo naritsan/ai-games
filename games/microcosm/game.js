@@ -302,8 +302,9 @@ function spawnCreature(pos) {
   const ringMat = new THREE.MeshBasicMaterial({ color: '#556688', transparent: true, opacity: 0.2, depthWrite: false });
   const ringMesh = new THREE.Mesh(ringGeo, ringMat);
   ringMesh.rotation.x = -Math.PI / 2;
+  ringMesh.position.copy(pos);
   ringMesh.position.y = 0.02;
-  mesh.add(ringMesh);
+  scene.add(ringMesh);
 
   const baseSpeed = 0.5 + Math.random() * 0.7;
   creatures.push({
@@ -653,13 +654,16 @@ function updateCreatures(dt) {
     c.mesh.material.opacity = c.state === 'torpor' ? 0.4 : 1;
     c.mesh.material.transparent = c.state === 'torpor';
 
-    // Perception ring color
+    // Perception ring — sync position, color
+    c.ringMesh.position.x = c.pos.x;
+    c.ringMesh.position.z = c.pos.z;
     c.ringMesh.material.color.set(c.foodInRange ? '#ffaa44' : '#556688');
     c.ringMesh.material.opacity = c.foodInRange ? 0.45 : 0.15;
 
     // Death
     if (c.energy <= 0) {
       scene.remove(c.mesh);
+      scene.remove(c.ringMesh);
       creatures.splice(i, 1);
       continue;
     }
