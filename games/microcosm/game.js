@@ -523,13 +523,9 @@ function updateCreatures(dt) {
         break;
 
       case 'frantic':
-        speed = c.baseSpeed * 2.5 * speedMod;
-        if (!c.wanderTarget || c.pos.distanceTo(c.wanderTarget) < 0.5 || Math.random() < 0.05) {
-          const angle = Math.random() * Math.PI * 2;
-          const dist = 3 + Math.random() * (ARENA_HALF - 1);
-          c.wanderTarget = new THREE.Vector3(Math.cos(angle) * dist, 0.15, Math.sin(angle) * dist);
-        }
-        targetAngle = angleToward(c.pos, c.wanderTarget);
+        // Charge straight until hitting something
+        speed = c.baseSpeed * 3.0 * speedMod;
+        targetAngle = c.heading; // keep going straight
         break;
 
       case 'exploring':
@@ -569,7 +565,7 @@ function updateCreatures(dt) {
         const pushMag = (minDist - d) * 3;
         c.pos.x += (c.pos.x - other.pos.x) / d * pushMag * (1 - ratio) * dt;
         c.pos.z += (c.pos.z - other.pos.z) / d * pushMag * (1 - ratio) * dt;
-        c.heading += (Math.random() - 0.5) * 0.5;
+        c.heading += (Math.random() - 0.5) * (c.state === 'frantic' ? 1.5 : 0.5);
         // Interrupt eating on strong push
         if (pushMag * (1 - ratio) * dt > 0.05 && c.state === 'eating') {
           c.state = 'exploring';
@@ -582,12 +578,12 @@ function updateCreatures(dt) {
     c.pos.y += Math.sin(c.phase * 1.8) * bobAmp * dt;
     if (c.pos.y > 0.2) c.pos.y -= 0.2 * dt;
 
-    // Bounds
+    // Bounds — frantic bounces off walls
     const bound = ARENA_HALF - 0.3;
-    if (c.pos.x > bound) { c.pos.x = bound; c.heading = Math.PI; }
-    if (c.pos.x < -bound) { c.pos.x = -bound; c.heading = 0; }
-    if (c.pos.z > bound) { c.pos.z = bound; c.heading = -Math.PI / 2; }
-    if (c.pos.z < -bound) { c.pos.z = -bound; c.heading = Math.PI / 2; }
+    if (c.pos.x > bound) { c.pos.x = bound; c.heading = c.state === 'frantic' ? Math.PI - c.heading + (Math.random()-0.5)*0.8 : Math.PI; }
+    if (c.pos.x < -bound) { c.pos.x = -bound; c.heading = c.state === 'frantic' ? -Math.PI - c.heading + (Math.random()-0.5)*0.8 : 0; }
+    if (c.pos.z > bound) { c.pos.z = bound; c.heading = c.state === 'frantic' ? -c.heading + (Math.random()-0.5)*0.8 : -Math.PI/2; }
+    if (c.pos.z < -bound) { c.pos.z = -bound; c.heading = c.state === 'frantic' ? -c.heading + (Math.random()-0.5)*0.8 : Math.PI/2; }
     if (c.pos.y > 2.0) c.pos.y = 2.0;
 
     // Satiety & energy decay
