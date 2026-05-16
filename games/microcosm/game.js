@@ -338,6 +338,7 @@ function spawnCreature(pos) {
     baseSpeed,
     satietyDecay: 0.08 + Math.random() * 0.04, // ~2 game hours to deplete
     detectRange: 0.3 + Math.random() * 0.3,
+    foodInRange: false,
     fanMesh,
     reactionTime: 0.2 + Math.random() * 1.3,
     aggression: Math.random(), // 0=docile, 1=fierce
@@ -463,20 +464,22 @@ function updateCreatures(dt) {
     // Check nearby food with direction-aware perception
     let nearestScore = Infinity;
     let nearestNutrient = null;
+    c.foodInRange = false;
     const forwardRange = c.detectRange * 1.6;
     const rearRange = c.detectRange * 0.5;
     for (const n of nutrients) {
       const dx = n.pos.x - c.pos.x;
       const dz = n.pos.z - c.pos.z;
       const dist = Math.sqrt(dx * dx + dz * dz);
-      // Angle between heading and direction to food
       const angleToFood = Math.abs(Math.atan2(dz, dx) - c.heading);
       const angleDiff = Math.min(angleToFood, Math.PI * 2 - angleToFood);
-      // Effective range: forward=long, rear=short
       const effectiveRange = forwardRange - (forwardRange - rearRange) * (angleDiff / Math.PI);
-      if (dist < effectiveRange && dist < nearestScore) {
-        nearestScore = dist;
-        nearestNutrient = n;
+      if (dist < effectiveRange) {
+        c.foodInRange = true;
+        if (dist < nearestScore) {
+          nearestScore = dist;
+          nearestNutrient = n;
+        }
       }
     }
 
@@ -683,7 +686,8 @@ function updateCreatures(dt) {
     c.fanMesh.position.copy(c.pos);
     c.fanMesh.position.y = 0.03;
     c.fanMesh.rotation.y = c.heading;
-    c.fanMesh.material.opacity = (c.state === 'seeking' || c.state === 'frantic') ? 0.3 : 0.08;
+    c.fanMesh.material.color.set(c.foodInRange ? '#ffaa44' : '#aaccff');
+    c.fanMesh.material.opacity = c.foodInRange ? 0.35 : (c.state === 'seeking' || c.state === 'frantic') ? 0.2 : 0.06;
 
     // Death
     if (c.energy <= 0) {
