@@ -66,7 +66,7 @@ const nutrientGeo = new THREE.SphereGeometry(0.08, 8, 8);
 const nutrientMat = new THREE.MeshBasicMaterial({ color: '#ffdd88' });
 
 function spawnNutrient(pos) {
-  const mesh = new THREE.Mesh(nutrientGeo, nutrientMat);
+  const mesh = new THREE.Mesh(nutrientGeo, nutrientMat.clone());
   mesh.position.copy(pos);
   scene.add(mesh);
   nutrients.push({
@@ -137,7 +137,7 @@ const creatureMat = new THREE.MeshStandardMaterial({
 });
 
 function spawnCreature(pos) {
-  const mesh = new THREE.Mesh(creatureGeo, creatureMat);
+  const mesh = new THREE.Mesh(creatureGeo, creatureMat.clone());
   mesh.position.copy(pos);
   mesh.castShadow = true;
   scene.add(mesh);
