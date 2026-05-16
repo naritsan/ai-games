@@ -320,7 +320,7 @@ function spawnCreature(pos) {
     // Individual traits
     baseSpeed,
     satietyDecay: 0.08 + Math.random() * 0.04, // ~2 game hours to deplete
-    detectRange: 0.3 + Math.random() * 0.3,
+    detectRange: 0.6 + Math.random() * 0.6,
     foodInRange: false,
     ringMesh,
     reactionTime: 0.2 + Math.random() * 1.3,
