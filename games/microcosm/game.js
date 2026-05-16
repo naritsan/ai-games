@@ -792,9 +792,8 @@ function refreshDetails() {
   let html = '';
   for (let i = 0; i < creatures.length; i++) {
     const c = creatures[i];
-    const t = Math.max(0, Math.min(1, c.energy / 1.5));
-    const r = Math.floor((1 - t) * 255);
-    const g = Math.floor(t * 200);
+    const hpR = Math.floor((1 - c.hp) * 255);
+    const hpG = Math.floor(c.hp * 200);
     const pct = (c.hp * 100).toFixed(0);
     const nrgPct = (c.energy * 100).toFixed(0);
     const satPct = (c.satiety * 100).toFixed(0);
@@ -1019,14 +1018,17 @@ function updateStatusPanel() {
     const dotColor = `rgb(${hpR},${hpG},0)`;
     const stateLabel = c.state === 'torpor' ? 'TOR' : c.state === 'frantic' ? 'FRN' : c.state === 'lethargic' ? 'LET' : c.state === 'eating' ? 'EAT' : c.state === 'resting' ? 'RST' : '';
     const hpPct = Math.floor(c.hp * 100);
+    const enPct = Math.floor((c.energy / 1.5) * 100);
     const satPct = Math.floor(c.satiety * 100);
     const hpColor = `rgb(${Math.floor((1 - c.hp) * 255)},${Math.floor(c.hp * 200)},0)`;
+    const enColor = `rgb(${Math.floor((1 - c.energy/1.5) * 255)},${Math.floor((c.energy/1.5) * 200)},0)`;
     const satColor = c.satiety > 0.3 ? '#88bb44' : c.satiety > 0 ? '#ddaa33' : '#dd4433';
     html += `<div class="creature-row">
       <div class="creature-dot" style="background:${dotColor};box-shadow:0 0 6px ${dotColor}"></div>
       <div class="creature-stats">
         <div class="stat-line">#${i + 1} <span class="stat-label">${stateLabel}</span></div>
         <div class="gauge-row"><span class="gauge-label">HP</span><div class="gauge-bg"><div class="gauge-fill" style="width:${hpPct}%;background:${hpColor}"></div></div><span class="gauge-pct">${hpPct}%</span></div>
+        <div class="gauge-row"><span class="gauge-label">EN</span><div class="gauge-bg"><div class="gauge-fill" style="width:${enPct}%;background:${enColor}"></div></div><span class="gauge-pct">${enPct}%</span></div>
         <div class="gauge-row"><span class="gauge-label">SAT</span><div class="gauge-bg"><div class="gauge-fill" style="width:${satPct}%;background:${satColor}"></div></div><span class="gauge-pct">${satPct}%</span></div>
       </div>
     </div>`;
