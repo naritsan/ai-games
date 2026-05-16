@@ -523,9 +523,16 @@ function updateCreatures(dt) {
         break;
 
       case 'frantic':
-        // Charge straight until hitting something
+        // Charge mostly straight, occasional random swerves
         speed = c.baseSpeed * 3.0 * speedMod;
-        targetAngle = c.heading; // keep going straight
+        if (!c.wanderTarget || c.pos.distanceTo(c.wanderTarget) < 0.4 || Math.random() < 0.02) {
+          const angle = c.heading + (Math.random() - 0.5) * 1.2;
+          c.wanderTarget = new THREE.Vector3(
+            c.pos.x + Math.cos(angle) * 5, 0.15,
+            c.pos.z + Math.sin(angle) * 5
+          );
+        }
+        targetAngle = angleToward(c.pos, c.wanderTarget);
         break;
 
       case 'exploring':
