@@ -196,7 +196,6 @@ function spawnNutrient(pos, size) {
     mesh,
     life: 30,
     size,
-    claimedBy: null,
     eatProgress: 0,
     eatTime: def.eatTime,
     energy: def.energy,
@@ -204,6 +203,7 @@ function spawnNutrient(pos, size) {
     maxEnergy: def.energy,
     maxSatiety: def.satiety,
     originalScale: mesh.scale.clone(),
+    eaters: 0,
   });
 }
 
@@ -215,8 +215,7 @@ function randomNutrientSize() {
 function updateNutrients(dt) {
   for (let i = nutrients.length - 1; i >= 0; i--) {
     const n = nutrients[i];
-    if (n.claimedBy) continue; // locked while being eaten
-
+    n.eaters = 0;
     n.life -= dt;
     if (n.life <= 0) {
       scene.remove(n.mesh);
@@ -261,7 +260,6 @@ function updateNutrients(dt) {
   for (let i = 0; i < nutrients.length; i++) {
     for (let j = i + 1; j < nutrients.length; j++) {
       const a = nutrients[i], b = nutrients[j];
-      if (a.claimedBy || b.claimedBy) continue;
       const dx = a.pos.x - b.pos.x;
       const dz = a.pos.z - b.pos.z;
       const dist = Math.sqrt(dx * dx + dz * dz);
@@ -325,8 +323,6 @@ function spawnCreature(pos) {
     restTimer: 0,
     satisfiedTimer: 0,
     wanderTarget: null,
-    eatingTarget: null,
-    eatingProgress: 0,
   });
 }
 
@@ -348,46 +344,44 @@ function updateCreatures(dt) {
     const dying = c.age > c.maxAge;
     if (dying) c.energy -= dt * 0.06; // rapid decline past maxAge
 
-    // ── Eating state ────────────────────────────────
-    if (c.state === 'eating') {
-      const n = c.eatingTarget;
-      if (!n || !nutrients.includes(n)) {
-        // Food gone
-        c.eatingTarget = null;
-        c.eatingProgress = 0;
-        c.state = 'exploring';
-        c.stateTimer = 1 + Math.random() * 2;
-      } else {
-        // Progress eating — gradual consumption
-        c.eatingProgress += dt / n.eatTime;
-        // Shrink food as it's eaten
-        const remain = 1 - c.eatingProgress;
-        n.mesh.scale.copy(n.originalScale).multiplyScalar(Math.max(0.05, remain));
-        // Award partial energy incrementally
-        const prevProgress = c.eatingProgress - dt / n.eatTime;
-        if (Math.floor(c.eatingProgress * 4) > Math.floor(prevProgress * 4)) {
-          // Small energy tick every 25% of eating
-          c.energy = Math.min(1.5, c.energy + n.maxEnergy * 0.25);
-          c.satiety = Math.min(1.0, c.satiety + n.maxSatiety * 0.25);
-        }
-        // Pulse while eating
-        const gs = 0.5 + c.growth * 0.7;
-        const es = 0.7 + c.energy * 0.4;
-        const pulse = 1 + Math.sin(c.phase * 6) * 0.06;
-        c.mesh.scale.setScalar(gs * es * pulse);
-        if (c.eatingProgress >= 1) {
-          // Fully consumed
-          c.eatFlash = 0.5;
-          c.wanderTarget = null;
-          c.foodNoticeAt = 0;
-          c.satisfiedTimer = 1.5 + Math.random() * 2;
-          scene.remove(n.mesh);
-          nutrients.splice(nutrients.indexOf(n), 1);
-          c.eatingTarget = null;
-          c.eatingProgress = 0;
-          c.state = 'exploring';
-          c.stateTimer = 2 + Math.random() * 3;
-        }
+    // ── Eating: contact-based, multi-creature ──────
+    // Find food in contact range (before eating check, so any state can eat)
+    let touchingFood = null;
+    for (const n of nutrients) {
+      if (c.pos.distanceTo(n.pos) < 0.45) {
+        touchingFood = n;
+        break;
+      }
+    }
+
+    if (touchingFood && c.state !== 'resting') {
+      c.state = 'eating';
+      const n = touchingFood;
+      n.eaters++;
+      // Multi-eater speed boost
+      const eatRate = dt / n.eatTime * (1 + (n.eaters - 1) * 0.5);
+      n.eatProgress += eatRate;
+      // Shrink food
+      const remain = 1 - n.eatProgress;
+      n.mesh.scale.copy(n.originalScale).multiplyScalar(Math.max(0.05, remain));
+      // Award energy in ticks
+      const prevProgress = n.eatProgress - eatRate;
+      if (Math.floor(n.eatProgress * 4) > Math.floor(prevProgress * 4)) {
+        c.energy = Math.min(1.5, c.energy + n.maxEnergy * 0.25);
+        c.satiety = Math.min(1.0, c.satiety + n.maxSatiety * 0.25);
+        c.eatFlash = 0.3;
+      }
+      // Pulse while eating
+      const gs = 0.5 + c.growth * 0.7;
+      const es = 0.7 + c.energy * 0.4;
+      const pulse = 1 + Math.sin(c.phase * 6) * 0.06;
+      c.mesh.scale.setScalar(gs * es * pulse);
+      if (n.eatProgress >= 1) {
+        c.satisfiedTimer = 1 + Math.random() * 1.5;
+        c.wanderTarget = null;
+        c.foodNoticeAt = 0;
+        scene.remove(n.mesh);
+        nutrients.splice(nutrients.indexOf(n), 1);
       }
       c.phase += dt * 3;
       c.satiety -= dt * c.satietyDecay;
@@ -396,8 +390,10 @@ function updateCreatures(dt) {
       continue;
     }
 
-    c.eatingTarget = null;
-    c.eatingProgress = 0;
+    if (c.state === 'eating') {
+      c.state = 'exploring';
+      c.stateTimer = 1 + Math.random();
+    }
 
     // ── State transitions ──────────────────────────
     const energyRatio = c.energy / 1.5;
@@ -422,7 +418,6 @@ function updateCreatures(dt) {
     let nearestDist = c.detectRange;
     let nearestNutrient = null;
     for (const n of nutrients) {
-      if (n.claimedBy) continue;
       const dist = c.pos.distanceTo(n.pos);
       if (dist < nearestDist) {
         nearestDist = dist;
@@ -492,12 +487,8 @@ function updateCreatures(dt) {
           speed = c.baseSpeed * 1.4 * urgency * speedMod * closeFactor;
           targetAngle = angleToward(c.pos, nearestNutrient.pos);
           c.stateTimer = 0;
-          // Start eating on contact
-          if (dist < 0.4 && !nearestNutrient.claimedBy) {
-            nearestNutrient.claimedBy = c;
-            c.eatingTarget = nearestNutrient;
-            c.eatingProgress = 0;
-            c.state = 'eating';
+          // Eating starts on contact in the shared eating block above
+          if (dist < 0.45) {
             c.foodNoticeAt = 0;
             continue;
           }
@@ -543,33 +534,10 @@ function updateCreatures(dt) {
         c.pos.x += (c.pos.x - other.pos.x) / d * pushMag * (1 - ratio) * dt;
         c.pos.z += (c.pos.z - other.pos.z) / d * pushMag * (1 - ratio) * dt;
         c.heading += (Math.random() - 0.5) * 0.5;
-        // Interrupt eating on strong collision
-        if (pushMag * (1 - ratio) * dt > 0.05) {
-          if (c.state === 'eating' && c.eatingTarget) {
-            c.eatingTarget.claimedBy = null;
-            c.eatingTarget = null;
-            c.eatingProgress = 0;
-            c.state = 'exploring';
-            c.stateTimer = 1;
-          }
-        }
-        // Steal food: aggressive/hungry creatures claim interrupted food
-        if (other.state === 'eating' && other.eatingTarget && c.state === 'seeking' && c.aggression > 0.5 && d < 0.6) {
-          const targetFood = other.eatingTarget;
-          const distToFood = c.pos.distanceTo(targetFood.pos);
-          if (distToFood < 0.5) {
-            other.eatingTarget.claimedBy = null;
-            other.eatingTarget = null;
-            other.eatingProgress = 0;
-            other.state = 'exploring';
-            other.stateTimer = 1;
-            targetFood.claimedBy = c;
-            c.eatingTarget = targetFood;
-            c.eatingProgress = 0;
-            c.state = 'eating';
-            c.foodNoticeAt = 0;
-            continue;
-          }
+        // Interrupt eating on strong push
+        if (pushMag * (1 - ratio) * dt > 0.05 && c.state === 'eating') {
+          c.state = 'exploring';
+          c.stateTimer = 0.5;
         }
       }
     }
@@ -615,8 +583,6 @@ function updateCreatures(dt) {
     // Death
     if (c.energy <= 0) {
       scene.remove(c.mesh);
-      // Release claimed nutrient
-      if (c.eatingTarget) c.eatingTarget.claimedBy = null;
       creatures.splice(i, 1);
       continue;
     }
