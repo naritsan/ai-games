@@ -335,8 +335,11 @@ function updateCreatures(dt) {
       } else {
         // Progress eating
         c.eatingProgress += dt / n.eatTime;
-        // Pulse while eating
-        c.mesh.scale.setScalar(1 + Math.sin(c.phase * 6) * 0.08);
+        // Pulse while eating (preserve normal scale)
+        const gs = 0.5 + c.growth * 0.7;
+        const es = 0.7 + c.energy * 0.4;
+        const pulse = 1 + Math.sin(c.phase * 6) * 0.06;
+        c.mesh.scale.setScalar(gs * es * pulse);
         if (c.eatingProgress >= 1) {
           // Finished eating
           c.energy = Math.min(1.5, c.energy + n.energy);
@@ -352,7 +355,9 @@ function updateCreatures(dt) {
           c.stateTimer = 2 + Math.random() * 3;
         }
       }
-      // Skip normal update while eating (stay in place)
+      // Stay in place while eating (age/phase already advanced above)
+      c.phase += dt * 3;
+      c.energy -= dt * c.metabolism;
       c.mesh.position.copy(c.pos);
       continue;
     }
