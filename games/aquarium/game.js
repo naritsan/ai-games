@@ -144,7 +144,6 @@ function spawnCreature(pos) {
 
   creatures.push({
     pos: pos.clone(),
-    vel: new THREE.Vector3(),
     energy: 1.0,
     age: 0,
     phase: Math.random() * Math.PI * 2,
@@ -158,34 +157,13 @@ function updateCreatures(dt) {
     const c = creatures[i];
     c.age += dt;
     c.eatFlash = Math.max(0, c.eatFlash - dt);
+    c.phase += dt * 2;
 
-    // 1. Wander — pick random targets when idle
-    if (!c.wanderTarget || c.pos.distanceTo(c.wanderTarget) < 0.5) {
-      const angle = Math.random() * Math.PI * 2;
-      const dist = 1 + Math.random() * 4;
-      c.wanderTarget = new THREE.Vector3(
-        Math.cos(angle) * dist,
-        0.15,
-        Math.sin(angle) * dist
-      );
-    }
-    // Move toward wander target with some noise
-    const toTarget = new THREE.Vector3().copy(c.wanderTarget).sub(c.pos);
-    toTarget.y = 0;
-    const targetDist = toTarget.length();
-    if (targetDist > 0.1) {
-      toTarget.normalize();
-      c.vel.x += toTarget.x * 1.5 * dt;
-      c.vel.z += toTarget.z * 1.5 * dt;
-    }
-    // Brownian noise on top
-    c.vel.x += (Math.random() - 0.5) * 0.6 * dt;
-    c.vel.z += (Math.random() - 0.5) * 0.6 * dt;
-    // Subtle vertical bob
-    c.vel.y += Math.sin(c.phase * 1.3) * 0.05 * dt;
-    if (c.pos.y > 0.2) c.vel.y -= 0.2 * dt;
+    // Determine movement direction and speed
+    let moveDir = null;
+    let speed = 0.8; // base wander speed
 
-    // 2. Seek nearest nutrient — overrides wander when food is near
+    // Check for nearby food — overrides wander
     let nearestDist = 3.0;
     let nearestNutrient = null;
     for (const n of nutrients) {
@@ -197,17 +175,44 @@ function updateCreatures(dt) {
     }
 
     if (nearestNutrient) {
-      const dir = new THREE.Vector3()
-        .copy(nearestNutrient.pos)
-        .sub(c.pos)
-        .normalize();
-      const urgency = 1 + (1 - nearestDist / 3.0) * 2;
-      c.vel.x += dir.x * 2.0 * urgency * dt;
-      c.vel.z += dir.z * 2.0 * urgency * dt;
-      c.vel.y += dir.y * 0.3 * dt;
+      // Move toward food with urgency
+      moveDir = new THREE.Vector3().copy(nearestNutrient.pos).sub(c.pos);
+      moveDir.y = 0;
+      const dist = moveDir.length();
+      if (dist > 0.05) {
+        moveDir.normalize();
+        speed = 1.2 + (1 - Math.min(dist, 3.0) / 3.0) * 1.5;
+      }
+    } else {
+      // Wander: pick random target, move toward it
+      if (!c.wanderTarget || c.pos.distanceTo(c.wanderTarget) < 0.3) {
+        c.wanderTarget = new THREE.Vector3(
+          (Math.random() - 0.5) * (ARENA_HALF - 1) * 2,
+          0.15,
+          (Math.random() - 0.5) * (ARENA_HALF - 1) * 2
+        );
+      }
+      moveDir = new THREE.Vector3().copy(c.wanderTarget).sub(c.pos);
+      moveDir.y = 0;
+      const dist = moveDir.length();
+      if (dist > 0.05) {
+        moveDir.normalize();
+      }
     }
 
-    // 3. Eat nutrients in contact
+    // Move directly (no inertia)
+    if (moveDir) {
+      const jitterX = (Math.random() - 0.5) * 0.3;
+      const jitterZ = (Math.random() - 0.5) * 0.3;
+      c.pos.x += (moveDir.x * speed + jitterX) * dt;
+      c.pos.z += (moveDir.z * speed + jitterZ) * dt;
+    }
+
+    // Subtle vertical bob
+    c.pos.y += Math.sin(c.phase * 1.3) * 0.03 * dt;
+    if (c.pos.y > 0.2) c.pos.y -= 0.2 * dt;
+
+    // Eat nutrients in contact
     for (let j = nutrients.length - 1; j >= 0; j--) {
       const n = nutrients[j];
       const dist = c.pos.distanceTo(n.pos);
@@ -220,29 +225,16 @@ function updateCreatures(dt) {
       }
     }
 
-    // 4. Move with lighter damping
-    c.vel.x *= 0.985;
-    c.vel.y *= 0.94;
-    c.vel.z *= 0.985;
-    c.phase += dt * 2;
-    c.pos.x += c.vel.x * dt;
-    c.pos.y += c.vel.y * dt;
-    c.pos.z += c.vel.z * dt;
+    // Bounds — hard clamp to arena
+    const bound = ARENA_HALF - 0.3;
+    c.pos.x = Math.max(-bound, Math.min(bound, c.pos.x));
+    c.pos.z = Math.max(-bound, Math.min(bound, c.pos.z));
+    if (c.pos.y > 2.0) c.pos.y = 2.0;
 
-    // 5. Bounds — spring force near arena edge
-    const margin = 0.5;
-    const spring = 1.5;
-    if (c.pos.x > ARENA_HALF - margin) c.vel.x -= (c.pos.x - (ARENA_HALF - margin)) * spring * dt;
-    if (c.pos.x < -ARENA_HALF + margin) c.vel.x -= (c.pos.x - (-ARENA_HALF + margin)) * spring * dt;
-    if (c.pos.z > ARENA_HALF - margin) c.vel.z -= (c.pos.z - (ARENA_HALF - margin)) * spring * dt;
-    if (c.pos.z < -ARENA_HALF + margin) c.vel.z -= (c.pos.z - (-ARENA_HALF + margin)) * spring * dt;
-    // Vertical bounds — don't fly too high (ground floor handled by radius collision)
-    if (c.pos.y > 2.0) c.vel.y -= (c.pos.y - 2.0) * spring * dt;
-
-    // 6. Energy decay
+    // Energy decay
     c.energy -= dt * 0.04;
 
-    // 7. Visual update — size and color based on energy
+    // Visual update — size and color based on energy
     const energyScale = 0.7 + c.energy * 0.4;
     const flashBoost = c.eatFlash > 0 ? 1 + c.eatFlash * 0.5 : 1;
     const scale = energyScale * flashBoost;
@@ -250,17 +242,14 @@ function updateCreatures(dt) {
 
     // Ground collision — keep bottom of sphere above ground
     const radius = 0.2 * scale;
-    if (c.pos.y < radius) {
-      c.pos.y = radius;
-      if (c.vel.y < 0) c.vel.y = 0;
-    }
+    if (c.pos.y < radius) c.pos.y = radius;
 
     // Color: green (full) → yellow → red (empty)
     const t = Math.max(0, Math.min(1, c.energy / 1.5));
     c.mesh.material.color.setRGB(1 - t, t, 0);
     c.mesh.material.emissive.setRGB((1 - t) * 0.3, t * 0.25, 0);
 
-    // 8. Death
+    // Death
     if (c.energy <= 0) {
       scene.remove(c.mesh);
       creatures.splice(i, 1);
