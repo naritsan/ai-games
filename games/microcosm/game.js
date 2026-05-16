@@ -43,6 +43,51 @@ const moonLight = new THREE.PointLight('#334466', 3, 12, 2);
 moonLight.position.set(0, 4, 0);
 scene.add(moonLight);
 
+// ── Celestial Bodies ────────────────────────────
+// Sun
+const sunGeo = new THREE.SphereGeometry(0.5, 16, 16);
+const sunMat = new THREE.MeshBasicMaterial({ color: '#ffffaa' });
+const sunMesh = new THREE.Mesh(sunGeo, sunMat);
+sunMesh.position.set(5, 8, 3);
+scene.add(sunMesh);
+
+// Sun glow (larger transparent halo)
+const glowGeo = new THREE.SphereGeometry(0.8, 16, 16);
+const glowMat = new THREE.MeshBasicMaterial({ color: '#ffffcc', transparent: true, opacity: 0.3, depthWrite: false });
+const glowMesh = new THREE.Mesh(glowGeo, glowMat);
+sunMesh.add(glowMesh);
+
+// Moon
+const moonGeo = new THREE.SphereGeometry(0.3, 12, 12);
+const moonMat = new THREE.MeshBasicMaterial({ color: '#ddeeff' });
+const moonMesh = new THREE.Mesh(moonGeo, moonMat);
+moonMesh.visible = false;
+scene.add(moonMesh);
+
+// Stars — scattered points in a hemisphere
+const starCount = 300;
+const starGeo = new THREE.BufferGeometry();
+const starPositions = new Float32Array(starCount * 3);
+for (let i = 0; i < starCount; i++) {
+  const theta = Math.random() * Math.PI * 2;
+  const phi = Math.random() * Math.PI * 0.45; // upper hemisphere
+  const r = 14 + Math.random() * 6;
+  starPositions[i * 3] = Math.cos(theta) * Math.cos(phi) * r;
+  starPositions[i * 3 + 1] = Math.sin(phi) * r + 2;
+  starPositions[i * 3 + 2] = Math.sin(theta) * Math.cos(phi) * r;
+}
+starGeo.setAttribute('position', new THREE.BufferAttribute(starPositions, 3));
+const starMat = new THREE.PointsMaterial({
+  color: '#ffffff',
+  size: 0.08,
+  transparent: true,
+  opacity: 0,
+  depthWrite: false,
+  blending: THREE.AdditiveBlending,
+});
+const stars = new THREE.Points(starGeo, starMat);
+scene.add(stars);
+
 // ── Time-of-Day Presets ─────────────────────────
 const TIME_KEYFRAMES = [
   { h: 0,  bg: '#08081a', fog: '#08081a', amb: '#223355', ambI: 0.12, sun: '#334466', sunI: 0.0, moonI: 1.0 },
@@ -89,6 +134,27 @@ function updateTimeOfDay() {
   const sunAngle = (h / 24) * Math.PI * 2 - Math.PI / 2;
   const sunDist = 8;
   sun.position.set(Math.cos(sunAngle) * sunDist, Math.sin(sunAngle) * sunDist + 2, -2);
+
+  // Sun mesh follows directional light, visible when above horizon
+  const sunY = Math.sin(sunAngle);
+  sunMesh.position.copy(sun.position);
+  sunMesh.visible = sunY > -0.05;
+  sunMesh.material.opacity = Math.max(0, Math.min(1, sunY * 4));
+  sunMesh.material.transparent = true;
+  glowMesh.visible = sunY > 0.1;
+
+  // Moon: opposite side of sky from sun
+  const moonAngle = sunAngle + Math.PI;
+  const moonDist = 7;
+  moonMesh.position.set(Math.cos(moonAngle) * moonDist, Math.sin(moonAngle) * moonDist + 2, -2);
+  const moonY = Math.sin(moonAngle);
+  moonMesh.visible = moonY > 0;
+  moonMesh.material.opacity = Math.max(0, Math.min(1, moonY * 3));
+  moonMesh.material.transparent = true;
+
+  // Stars: visible at night, fade with moonlight
+  const nightFactor = moonLight.intensity;
+  stars.material.opacity = nightFactor * 0.8;
 }
 
 // ── Arena Ground ────────────────────────────────
