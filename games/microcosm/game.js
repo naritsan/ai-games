@@ -352,9 +352,8 @@ function spawnCreature(pos) {
     wanderTarget: null,
   });
   // Scale fan: x = forward range, z = width
-  const fr = creatures[creatures.length - 1].detectRange * 1.6;
-  const rr = creatures[creatures.length - 1].detectRange * 0.7;
-  fanMesh.scale.set(fr, rr, 1);
+  const dr = creatures[creatures.length - 1].detectRange;
+  fanMesh.scale.set(dr * 1.6, 1, dr * 0.7);
 }
 
 function updateCreatures(dt) {
