@@ -174,9 +174,9 @@ scene.add(ring);
 // ── Nutrient System ────────────────────────────
 const nutrients = [];
 const NUTRIENT_DEFS = {
-  s: { radius: 0.05, eatTime: 0.4,  energy: 0.08, satiety: 0.10, color: '#ffffbb' },
-  m: { radius: 0.10, eatTime: 1.0,  energy: 0.15, satiety: 0.25, color: '#ffcc66' },
-  l: { radius: 0.16, eatTime: 2.5,  energy: 0.30, satiety: 0.50, color: '#ff8833' },
+  s: { radius: 0.05, eatTime: 0.3,  energy: 0.05, satiety: 0.20, color: '#ffffbb' },
+  m: { radius: 0.10, eatTime: 0.8,  energy: 0.10, satiety: 0.45, color: '#ffcc66' },
+  l: { radius: 0.16, eatTime: 2.0,  energy: 0.20, satiety: 0.80, color: '#ff8833' },
 };
 
 const nutrientGeos = {
@@ -310,7 +310,7 @@ function spawnCreature(pos) {
     foodNoticeAt: 0,
     // Individual traits
     baseSpeed,
-    satietyDecay: 0.008 + Math.random() * 0.006,
+    satietyDecay: 0.08 + Math.random() * 0.04, // ~2 game hours to deplete
     detectRange: 2.5 + Math.random() * 1.5,
     reactionTime: 0.2 + Math.random() * 1.3,
     aggression: Math.random(), // 0=docile, 1=fierce
@@ -385,7 +385,7 @@ function updateCreatures(dt) {
       }
       c.phase += dt * 3;
       c.satiety -= dt * c.satietyDecay;
-      if (c.satiety < 0.2) c.energy -= dt * 0.008;
+      if (c.satiety < 0.3) c.energy -= dt * 0.006 * 1.5;
       c.mesh.position.copy(c.pos);
       continue;
     }
@@ -572,11 +572,9 @@ function updateCreatures(dt) {
 
     // Satiety & energy decay
     c.satiety = Math.max(0, c.satiety - dt * c.satietyDecay);
-    const hunger = 1 - c.satiety;
-    if (c.satiety < 0.3) {
-      c.energy -= dt * (0.004 + hunger * 0.008) * (elderly ? 1.4 : 1.0);
-    }
-    if (speed > 0 && c.state !== 'frantic') c.energy -= dt * speed * 0.002;
+    const hungerMult = c.satiety < 0.3 ? 1.5 : 1.0;
+    c.energy -= dt * 0.006 * hungerMult * (elderly ? 1.4 : 1.0);
+    if (speed > 0 && c.state !== 'frantic') c.energy -= dt * speed * 0.0015;
 
     // ── Visual ──────────────────────────────────────
     const growthSize = 0.5 + c.growth * 0.7;
