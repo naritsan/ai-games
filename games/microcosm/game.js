@@ -385,7 +385,6 @@ function updateCreatures(dt) {
       }
       c.phase += dt * 3;
       c.satiety -= dt * c.satietyDecay;
-      if (c.satiety < 0.3) c.energy -= dt * 0.006 * 1.5;
       c.mesh.position.copy(c.pos);
       continue;
     }
@@ -695,7 +694,7 @@ function refreshDetails() {
     const pct = (c.energy * 100).toFixed(0);
     const satPct = (c.satiety * 100).toFixed(0);
     const ageStr = c.age > c.maxAge ? 'Dying' : c.age > c.maxAge * 0.8 ? 'Elderly' : c.growth < 1 ? 'Growing' : 'Adult';
-    const stateLabel = c.satiety < 0.3 ? 'Hungry' : c.state.charAt(0).toUpperCase() + c.state.slice(1);
+    const stateLabel = c.state === 'torpor' ? 'Torpor' : c.state === 'frantic' ? 'Frantic' : c.state === 'lethargic' ? 'Lethargic' : c.satiety < 0.3 ? 'Hungry' : c.state.charAt(0).toUpperCase() + c.state.slice(1);
     html += `<div class="detail-card">
       <div class="detail-header">
         <div class="creature-dot" style="background:rgb(${r},${g},0);box-shadow:0 0 8px rgb(${r},${g},0)"></div>
@@ -910,9 +909,10 @@ function updateStatusPanel() {
     const r = Math.floor((1 - t) * 255);
     const g = Math.floor(t * 200);
     const dotColor = `rgb(${r},${g},0)`;
+    const stateLabel = c.state === 'torpor' ? 'TOR' : c.state === 'frantic' ? 'FRN' : c.state === 'lethargic' ? 'LET' : c.state === 'eating' ? 'EAT' : c.state === 'resting' ? 'RST' : '';
     html += `<div class="creature-row">
       <div class="creature-dot" style="background:${dotColor};box-shadow:0 0 6px ${dotColor}"></div>
-      <div class="creature-stats">#${i + 1} &nbsp;VIT ${(c.energy * 100).toFixed(0)}% &nbsp;| &nbsp;${Math.floor(c.age)}s</div>
+      <div class="creature-stats">#${i + 1} &nbsp;VIT ${(c.energy * 100).toFixed(0)}% &nbsp;SAT ${(c.satiety * 100).toFixed(0)}% &nbsp;${stateLabel}</div>
     </div>`;
   }
   list.innerHTML = html;
