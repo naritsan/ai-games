@@ -174,9 +174,9 @@ scene.add(ring);
 // ── Nutrient System ────────────────────────────
 const nutrients = [];
 const NUTRIENT_DEFS = {
-  s: { radius: 0.05, eatTime: 0.4,  energy: 0.08, color: '#ffffbb' },
-  m: { radius: 0.10, eatTime: 1.0,  energy: 0.15, color: '#ffcc66' },
-  l: { radius: 0.16, eatTime: 2.5,  energy: 0.30, color: '#ff8833' },
+  s: { radius: 0.05, eatTime: 0.4,  energy: 0.08, satiety: 0.10, color: '#ffffbb' },
+  m: { radius: 0.10, eatTime: 1.0,  energy: 0.15, satiety: 0.25, color: '#ffcc66' },
+  l: { radius: 0.16, eatTime: 2.5,  energy: 0.30, satiety: 0.50, color: '#ff8833' },
 };
 
 const nutrientGeos = {
@@ -200,6 +200,7 @@ function spawnNutrient(pos, size) {
     eatProgress: 0,
     eatTime: def.eatTime,
     energy: def.energy,
+    satiety: def.satiety,
   });
 }
 
@@ -300,6 +301,7 @@ function spawnCreature(pos) {
     pos: pos.clone(),
     heading: Math.random() * Math.PI * 2,
     energy: 1.0,
+    satiety: 0.6 + Math.random() * 0.4,
     age: 0,
     phase: Math.random() * Math.PI * 2,
     mesh,
@@ -307,7 +309,7 @@ function spawnCreature(pos) {
     foodNoticeAt: 0,
     // Individual traits
     baseSpeed,
-    metabolism: 0.015 + Math.random() * 0.015,
+    satietyDecay: 0.008 + Math.random() * 0.006,
     detectRange: 2.5 + Math.random() * 1.5,
     reactionTime: 0.2 + Math.random() * 1.3,
     // Growth & lifespan
@@ -362,6 +364,7 @@ function updateCreatures(dt) {
         if (c.eatingProgress >= 1) {
           // Finished eating
           c.energy = Math.min(1.5, c.energy + n.energy);
+          c.satiety = Math.min(1.0, c.satiety + n.satiety);
           c.eatFlash = 0.5;
           c.wanderTarget = null;
           c.foodNoticeAt = 0;
@@ -376,7 +379,8 @@ function updateCreatures(dt) {
       }
       // Stay in place while eating (age/phase already advanced above)
       c.phase += dt * 3;
-      c.energy -= dt * c.metabolism;
+      c.satiety -= dt * c.satietyDecay;
+      if (c.satiety < 0.2) c.energy -= dt * 0.06;
       c.mesh.position.copy(c.pos);
       continue;
     }
@@ -387,14 +391,20 @@ function updateCreatures(dt) {
     // ── State transitions ──────────────────────────
     const energyRatio = c.energy / 1.5;
     const speedMod = elderly ? 0.5 : 1.0;
+    const frantic = c.satiety < 0.3 && energyRatio > 0.15;
 
-    if (energyRatio < 0.2 && c.state !== 'lethargic') {
+    if (energyRatio < 0.15 && c.state !== 'lethargic') {
       c.state = 'lethargic';
       c.stateTimer = 0;
     }
-    if (c.state === 'lethargic' && energyRatio > 0.35) {
+    if (c.state === 'lethargic' && energyRatio > 0.3 && c.satiety > 0.2) {
       c.state = 'exploring';
       c.stateTimer = 1 + Math.random() * 2;
+    }
+
+    // Frantic mode overrides resting
+    if (frantic && (c.state === 'resting' || c.state === 'exploring')) {
+      c.state = 'exploring';
     }
 
     // Check nearby food (unclaimed only)
@@ -410,7 +420,8 @@ function updateCreatures(dt) {
     }
 
     if (nearestNutrient && c.state !== 'eating') {
-      if (c.foodNoticeAt === 0) c.foodNoticeAt = c.age + c.reactionTime;
+      const delay = frantic ? 0 : c.reactionTime;
+      if (c.foodNoticeAt === 0) c.foodNoticeAt = c.age + delay;
       if (c.age >= c.foodNoticeAt && c.state !== 'seeking') {
         c.state = 'seeking';
         c.stateTimer = 0;
@@ -421,8 +432,8 @@ function updateCreatures(dt) {
       c.stateTimer = 1 + Math.random() * 2;
     }
 
-    // Resting
-    if (c.state === 'exploring' && c.satisfiedTimer <= 0) {
+    // Resting (skip when frantic)
+    if (c.state === 'exploring' && c.satisfiedTimer <= 0 && !frantic) {
       c.stateTimer -= dt;
       if (c.stateTimer <= 0) {
         c.state = 'resting';
@@ -485,7 +496,8 @@ function updateCreatures(dt) {
       case 'exploring':
       default: {
         speed = c.baseSpeed * (0.6 + energyRatio * 0.5) * speedMod;
-        if (c.satisfiedTimer > 0) speed *= 0.5;
+        if (frantic) speed *= 1.6;
+        if (c.satisfiedTimer > 0 && !frantic) speed *= 0.5;
         if (!c.wanderTarget || c.pos.distanceTo(c.wanderTarget) < 0.3) pickWanderTarget(c);
         targetAngle = angleToward(c.pos, c.wanderTarget);
         break;
@@ -532,7 +544,14 @@ function updateCreatures(dt) {
     if (c.pos.z < -bound) { c.pos.z = -bound; c.heading = Math.PI / 2; }
     if (c.pos.y > 2.0) c.pos.y = 2.0;
 
-    c.energy -= dt * (c.metabolism * (elderly ? 1.4 : 1.0));
+    // Satiety & energy decay
+    c.satiety = Math.max(0, c.satiety - dt * c.satietyDecay);
+    const hunger = 1 - c.satiety; // 0=full, 1=starving
+    if (c.satiety < 0.3) {
+      c.energy -= dt * (0.03 + hunger * 0.06) * (elderly ? 1.4 : 1.0);
+    }
+    // Movement costs energy
+    if (speed > 0) c.energy -= dt * speed * 0.008;
 
     // ── Visual ──────────────────────────────────────
     const growthSize = 0.5 + c.growth * 0.7;
@@ -627,8 +646,9 @@ function refreshDetails() {
     const r = Math.floor((1 - t) * 255);
     const g = Math.floor(t * 200);
     const pct = (c.energy * 100).toFixed(0);
+    const satPct = (c.satiety * 100).toFixed(0);
     const ageStr = c.age > c.maxAge ? 'Dying' : c.age > c.maxAge * 0.8 ? 'Elderly' : c.growth < 1 ? 'Growing' : 'Adult';
-    const stateLabel = c.state.charAt(0).toUpperCase() + c.state.slice(1);
+    const stateLabel = c.satiety < 0.3 ? 'Hungry' : c.state.charAt(0).toUpperCase() + c.state.slice(1);
     html += `<div class="detail-card">
       <div class="detail-header">
         <div class="creature-dot" style="background:rgb(${r},${g},0);box-shadow:0 0 8px rgb(${r},${g},0)"></div>
@@ -636,6 +656,7 @@ function refreshDetails() {
       </div>
       <div class="detail-grid">
         <div>Vitality <span>${pct}%</span></div>
+        <div>Satiety <span>${satPct}%</span></div>
         <div>Age <span>${Math.floor(c.age)}s / ${Math.floor(c.maxAge)}s</span></div>
         <div>Growth <span>${(c.growth * 100).toFixed(0)}%</span></div>
         <div>Stage <span>${ageStr}</span></div>
