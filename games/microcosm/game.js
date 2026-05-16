@@ -621,9 +621,11 @@ function updateCreatures(dt) {
     c.mesh.material.color.setRGB(1 - t, t * 0.85, 0);
     c.mesh.material.emissive.setRGB((1 - t) * 0.3, t * 0.22, 0);
     if (c.state === 'frantic') {
-      c.mesh.material.emissiveIntensity = 0.5 + Math.sin(c.phase * 8) * 0.3;
+      c.mesh.material.emissiveIntensity = 1.0 + Math.sin(c.phase * 10) * 0.5;
+      c.mesh.material.emissive.setRGB((1 - t) * 0.5, t * 0.4, 0);
     } else {
       c.mesh.material.emissiveIntensity = 0.3;
+      c.mesh.material.emissive.setRGB((1 - t) * 0.3, t * 0.22, 0);
     }
     c.mesh.material.opacity = c.state === 'torpor' ? 0.4 : 1;
     c.mesh.material.transparent = c.state === 'torpor';
