@@ -186,11 +186,15 @@ const nutrientGeos = {
 };
 
 function spawnNutrient(pos, size) {
+  return spawnNutrientReturn(pos, size);
+}
+
+function spawnNutrientReturn(pos, size) {
   const def = NUTRIENT_DEFS[size];
   const mesh = new THREE.Mesh(nutrientGeos[size], new THREE.MeshBasicMaterial({ color: def.color }));
   mesh.position.copy(pos);
   scene.add(mesh);
-  nutrients.push({
+  const n = {
     pos: pos.clone(),
     vel: new THREE.Vector3(0, -0.05, 0),
     mesh,
@@ -204,7 +208,9 @@ function spawnNutrient(pos, size) {
     maxSatiety: def.satiety,
     originalScale: mesh.scale.clone(),
     eaters: 0,
-  });
+  };
+  nutrients.push(n);
+  return n;
 }
 
 function randomNutrientSize() {
@@ -630,21 +636,11 @@ function updateCreatures(dt) {
           other.pos.z += (other.pos.z - c.pos.z) / d * 0.3;
           // If victim dies, spawn food based on remaining energy
           if (other.hp <= 0) {
-            const corpseEnergy = Math.max(0.2, other.energy);
-            const nutrientCount = Math.max(1, Math.floor(corpseEnergy * 8)); // ~1-10 nutrients
-            for (let k = 0; k < nutrientCount; k++) {
-              const size = corpseEnergy > 0.8 ? 'l' : corpseEnergy > 0.4 ? 'm' : 's';
-              const p = new THREE.Vector3(
-                other.pos.x + (Math.random() - 0.5) * 0.5,
-                1.5 + Math.random() * 0.5,
-                other.pos.z + (Math.random() - 0.5) * 0.5
-              );
-              spawnNutrient(p, size);
-            }
-            const feedEnergy = Math.min(0.5, corpseEnergy * 0.6);
+            // Corpse stays on ground (created in death check), attacker gets immediate bite
+            const feedEnergy = Math.min(0.5, other.energy * 0.4);
             c.energy = Math.min(1.5, c.energy + feedEnergy);
-            c.satiety = Math.min(1.0, c.satiety + feedEnergy);
-            c.satisfiedTimer = 2;
+            c.satiety = Math.min(1.0, c.satiety + feedEnergy * 0.8);
+            c.satisfiedTimer = 1;
             c.state = 'exploring';
           }
         }
@@ -721,8 +717,25 @@ function updateCreatures(dt) {
       c.hp = Math.min(1.0, c.hp + dt * 0.15);
     }
 
-    // Death
+    // Death — corpse remains on field as food
     if (c.energy <= 0 || c.hp <= 0) {
+      const corpseEnergy = Math.max(0.2, c.energy);
+      const corpseSatiety = Math.max(0.2, c.satiety);
+      const size = corpseEnergy > 0.8 ? 'l' : corpseEnergy > 0.4 ? 'm' : 's';
+      // Spawn corpse nutrient at ground level
+      const corpsePos = c.pos.clone();
+      corpsePos.y = 0.12;
+      const n = spawnNutrientReturn(corpsePos, size);
+      if (n) {
+        n.energy = corpseEnergy;
+        n.satiety = corpseSatiety;
+        n.maxEnergy = corpseEnergy;
+        n.maxSatiety = corpseSatiety;
+        n.mesh.material.color.set('#884422');
+        n.mesh.material.opacity = 0.8;
+        n.mesh.material.transparent = true;
+        n.life = 40;
+      }
       scene.remove(c.mesh);
       scene.remove(c.ringMesh);
       creatures.splice(i, 1);
