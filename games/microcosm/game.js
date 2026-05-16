@@ -683,7 +683,7 @@ function updateCreatures(dt) {
     // Perception fan — follow creature, face heading
     c.fanMesh.position.copy(c.pos);
     c.fanMesh.position.y = 0.03;
-    c.fanMesh.rotation.y = c.heading - Math.PI / 2;
+    c.fanMesh.rotation.y = c.heading;
     c.fanMesh.material.opacity = (c.state === 'seeking' || c.state === 'frantic') ? 0.3 : 0.08;
 
     // Death
