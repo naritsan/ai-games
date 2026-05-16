@@ -465,11 +465,13 @@ function updateCreatures(dt) {
         if (nearestNutrient) {
           const dist = c.pos.distanceTo(nearestNutrient.pos);
           const urgency = 1 + (1 - Math.min(dist, c.detectRange) / c.detectRange) * 2;
-          speed = c.baseSpeed * 1.4 * urgency * speedMod;
+          // Slow down when close to avoid overshooting
+          const closeFactor = Math.min(1, dist / 0.8);
+          speed = c.baseSpeed * 1.4 * urgency * speedMod * closeFactor;
           targetAngle = angleToward(c.pos, nearestNutrient.pos);
           c.stateTimer = 0;
           // Start eating on contact
-          if (dist < 0.35 && !nearestNutrient.claimedBy) {
+          if (dist < 0.4 && !nearestNutrient.claimedBy) {
             nearestNutrient.claimedBy = c;
             c.eatingTarget = nearestNutrient;
             c.eatingProgress = 0;
@@ -493,7 +495,7 @@ function updateCreatures(dt) {
     let angleDiff = targetAngle - c.heading;
     while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
     while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
-    const turnRate = 2.5 + Math.random() * 0.5;
+    const turnRate = c.state === 'seeking' ? 5.0 : 3.0 + Math.random() * 0.5;
     c.heading += Math.sign(angleDiff) * Math.min(Math.abs(angleDiff), turnRate * dt);
 
     if (speed > 0) {
