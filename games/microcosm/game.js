@@ -297,32 +297,6 @@ function spawnCreature(pos) {
   mesh.castShadow = true;
   scene.add(mesh);
 
-  // Perception fan (flat wedge on ground, wider forward)
-  const fanGeo = new THREE.BufferGeometry();
-  const fanSegments = 12;
-  const fanVerts = [];
-  const fanFront = 1.0; // base radius, scaled later
-  // Center point
-  fanVerts.push(0, 0.03, 0);
-  // Arc points from -90° to +90° (forward hemisphere)
-  for (let s = 0; s <= fanSegments; s++) {
-    const a = -Math.PI / 2 + (Math.PI / fanSegments) * s;
-    fanVerts.push(Math.cos(a) * fanFront, 0.03, Math.sin(a) * fanFront);
-  }
-  fanGeo.setAttribute('position', new THREE.Float32BufferAttribute(fanVerts, 3));
-  // Indices: triangle fan from center
-  const fanIdx = [];
-  for (let s = 0; s < fanSegments; s++) {
-    fanIdx.push(0, s + 1, s + 2);
-  }
-  fanGeo.setIndex(fanIdx);
-  fanGeo.computeVertexNormals();
-  const fanMat = new THREE.MeshBasicMaterial({ color: '#aaccff', transparent: true, opacity: 0.12, depthWrite: false, side: THREE.DoubleSide });
-  const fanMesh = new THREE.Mesh(fanGeo, fanMat);
-  fanMesh.position.copy(pos);
-  fanMesh.position.y = 0.03;
-  scene.add(fanMesh);
-
   const baseSpeed = 0.5 + Math.random() * 0.7;
   creatures.push({
     pos: pos.clone(),
@@ -338,8 +312,6 @@ function spawnCreature(pos) {
     baseSpeed,
     satietyDecay: 0.08 + Math.random() * 0.04, // ~2 game hours to deplete
     detectRange: 0.3 + Math.random() * 0.3,
-    foodInRange: false,
-    fanMesh,
     reactionTime: 0.2 + Math.random() * 1.3,
     aggression: Math.random(), // 0=docile, 1=fierce
     // Growth & lifespan
@@ -352,9 +324,6 @@ function spawnCreature(pos) {
     satisfiedTimer: 0,
     wanderTarget: null,
   });
-  // Scale fan: x = forward range, z = width
-  const dr = creatures[creatures.length - 1].detectRange;
-  fanMesh.scale.set(dr * 1.6, 1, dr * 0.7);
 }
 
 function updateCreatures(dt) {
@@ -461,25 +430,14 @@ function updateCreatures(dt) {
       c.state = 'torpor';
     }
 
-    // Check nearby food with direction-aware perception
-    let nearestScore = Infinity;
+    // Check nearby food (simple circular range)
+    let nearestDist = c.detectRange;
     let nearestNutrient = null;
-    c.foodInRange = false;
-    const forwardRange = c.detectRange * 1.6;
-    const rearRange = c.detectRange * 0.5;
     for (const n of nutrients) {
-      const dx = n.pos.x - c.pos.x;
-      const dz = n.pos.z - c.pos.z;
-      const dist = Math.sqrt(dx * dx + dz * dz);
-      const angleToFood = Math.abs(Math.atan2(dz, dx) - c.heading);
-      const angleDiff = Math.min(angleToFood, Math.PI * 2 - angleToFood);
-      const effectiveRange = forwardRange - (forwardRange - rearRange) * (angleDiff / Math.PI);
-      if (dist < effectiveRange) {
-        c.foodInRange = true;
-        if (dist < nearestScore) {
-          nearestScore = dist;
-          nearestNutrient = n;
-        }
+      const dist = c.pos.distanceTo(n.pos);
+      if (dist < nearestDist) {
+        nearestDist = dist;
+        nearestNutrient = n;
       }
     }
 
@@ -682,17 +640,9 @@ function updateCreatures(dt) {
     c.mesh.material.opacity = c.state === 'torpor' ? 0.4 : 1;
     c.mesh.material.transparent = c.state === 'torpor';
 
-    // Perception fan — follow creature, face heading
-    c.fanMesh.position.copy(c.pos);
-    c.fanMesh.position.y = 0.03;
-    c.fanMesh.rotation.y = c.heading;
-    c.fanMesh.material.color.set(c.foodInRange ? '#ffaa44' : '#aaccff');
-    c.fanMesh.material.opacity = c.foodInRange ? 0.35 : (c.state === 'seeking' || c.state === 'frantic') ? 0.2 : 0.06;
-
     // Death
     if (c.energy <= 0) {
       scene.remove(c.mesh);
-      scene.remove(c.fanMesh);
       creatures.splice(i, 1);
       continue;
     }
