@@ -385,7 +385,7 @@ function updateCreatures(dt) {
       }
       c.phase += dt * 3;
       c.satiety -= dt * c.satietyDecay;
-      if (c.satiety < 0.2) c.energy -= dt * 0.015;
+      if (c.satiety < 0.2) c.energy -= dt * 0.008;
       c.mesh.position.copy(c.pos);
       continue;
     }
@@ -398,20 +398,25 @@ function updateCreatures(dt) {
     // ── State transitions ──────────────────────────
     const energyRatio = c.energy / 1.5;
     const speedMod = elderly ? 0.5 : 1.0;
-    const frantic = c.satiety < 0.3 && energyRatio > 0.15;
 
-    if (energyRatio < 0.15 && c.state !== 'lethargic') {
+    // Frantic when hungry but still have energy
+    if (c.satiety < 0.3 && energyRatio > 0.1 && c.state !== 'frantic' && c.state !== 'eating') {
+      c.state = 'frantic';
+      c.wanderTarget = null;
+    }
+    if (c.state === 'frantic' && (c.satiety > 0.5 || energyRatio < 0.08)) {
+      c.state = energyRatio < 0.08 ? 'lethargic' : 'exploring';
+      c.stateTimer = 1;
+    }
+
+    // Lethargic when truly dying
+    if (energyRatio < 0.08 && c.state !== 'lethargic' && c.state !== 'eating') {
       c.state = 'lethargic';
       c.stateTimer = 0;
     }
-    if (c.state === 'lethargic' && energyRatio > 0.3 && c.satiety > 0.2) {
+    if (c.state === 'lethargic' && energyRatio > 0.3 && c.satiety > 0.3) {
       c.state = 'exploring';
       c.stateTimer = 1 + Math.random() * 2;
-    }
-
-    // Frantic mode overrides resting
-    if (frantic && (c.state === 'resting' || c.state === 'exploring')) {
-      c.state = 'exploring';
     }
 
     // Check nearby food (unclaimed only)
@@ -426,9 +431,9 @@ function updateCreatures(dt) {
     }
 
     if (nearestNutrient && c.state !== 'eating') {
-      const delay = frantic ? 0 : c.reactionTime;
+      const delay = c.state === 'frantic' ? 0 : c.reactionTime;
       if (c.foodNoticeAt === 0) c.foodNoticeAt = c.age + delay;
-      if (c.age >= c.foodNoticeAt && c.state !== 'seeking') {
+      if (c.age >= c.foodNoticeAt && c.state !== 'seeking' && c.state !== 'frantic') {
         c.state = 'seeking';
         c.stateTimer = 0;
       }
@@ -438,8 +443,8 @@ function updateCreatures(dt) {
       c.stateTimer = 1 + Math.random() * 2;
     }
 
-    // Resting (skip when frantic)
-    if (c.state === 'exploring' && c.satisfiedTimer <= 0 && !frantic) {
+    // Resting (only when exploring and not hungry)
+    if (c.state === 'exploring' && c.satisfiedTimer <= 0 && c.satiety > 0.5) {
       c.stateTimer -= dt;
       if (c.stateTimer <= 0) {
         c.state = 'resting';
@@ -481,9 +486,9 @@ function updateCreatures(dt) {
       case 'seeking':
         if (nearestNutrient) {
           const dist = c.pos.distanceTo(nearestNutrient.pos);
-          const urgency = 1 + (1 - Math.min(dist, c.detectRange) / c.detectRange) * 2;
-          // Slow down when close to avoid overshooting
-          const closeFactor = Math.min(1, dist / 0.8);
+          const desperate = c.satiety < 0.3;
+          const urgency = desperate ? 3.5 : (1 + (1 - Math.min(dist, c.detectRange) / c.detectRange) * 2);
+          const closeFactor = desperate ? 1.0 : Math.min(1, dist / 0.8);
           speed = c.baseSpeed * 1.4 * urgency * speedMod * closeFactor;
           targetAngle = angleToward(c.pos, nearestNutrient.pos);
           c.stateTimer = 0;
@@ -495,11 +500,22 @@ function updateCreatures(dt) {
         }
         break;
 
+      case 'frantic':
+        // Wild erratic dashing across the arena
+        speed = c.baseSpeed * 2.5 * speedMod;
+        if (!c.wanderTarget || c.pos.distanceTo(c.wanderTarget) < 0.5 || Math.random() < 0.05) {
+          // Pick targets far away, random directions
+          const angle = Math.random() * Math.PI * 2;
+          const dist = 3 + Math.random() * (ARENA_HALF - 1);
+          c.wanderTarget = new THREE.Vector3(Math.cos(angle) * dist, 0.15, Math.sin(angle) * dist);
+        }
+        targetAngle = angleToward(c.pos, c.wanderTarget);
+        break;
+
       case 'exploring':
       default: {
         speed = c.baseSpeed * (0.6 + energyRatio * 0.5) * speedMod;
-        if (frantic) speed *= 1.6;
-        if (c.satisfiedTimer > 0 && !frantic) speed *= 0.5;
+        if (c.satisfiedTimer > 0) speed *= 0.5;
         if (!c.wanderTarget || c.pos.distanceTo(c.wanderTarget) < 0.3) pickWanderTarget(c);
         targetAngle = angleToward(c.pos, c.wanderTarget);
         break;
@@ -509,7 +525,7 @@ function updateCreatures(dt) {
     let angleDiff = targetAngle - c.heading;
     while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
     while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
-    const turnRate = c.state === 'seeking' ? 5.0 : 3.0 + Math.random() * 0.5;
+    const turnRate = c.state === 'frantic' ? 7.0 : c.state === 'seeking' ? 5.0 : 3.0 + Math.random() * 0.5;
     c.heading += Math.sign(angleDiff) * Math.min(Math.abs(angleDiff), turnRate * dt);
 
     if (speed > 0) {
@@ -558,10 +574,9 @@ function updateCreatures(dt) {
     c.satiety = Math.max(0, c.satiety - dt * c.satietyDecay);
     const hunger = 1 - c.satiety;
     if (c.satiety < 0.3) {
-      c.energy -= dt * (0.008 + hunger * 0.015) * (elderly ? 1.4 : 1.0);
+      c.energy -= dt * (0.004 + hunger * 0.008) * (elderly ? 1.4 : 1.0);
     }
-    // Movement costs energy
-    if (speed > 0) c.energy -= dt * speed * 0.003;
+    if (speed > 0 && c.state !== 'frantic') c.energy -= dt * speed * 0.002;
 
     // ── Visual ──────────────────────────────────────
     const growthSize = 0.5 + c.growth * 0.7;
