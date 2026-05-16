@@ -159,12 +159,13 @@ function updateCreatures(dt) {
     c.age += dt;
     c.eatFlash = Math.max(0, c.eatFlash - dt);
 
-    // 1. Drift — Brownian motion on the ground plane
-    c.phase += dt * 2;
-    c.vel.x += Math.sin(c.phase) * 0.4 * dt;
-    c.vel.z += Math.cos(c.phase * 0.7) * 0.4 * dt;
-    c.vel.x += (Math.random() - 0.5) * 0.3 * dt;
-    c.vel.z += (Math.random() - 0.5) * 0.3 * dt;
+    // 1. Drift — active random wandering on the ground plane
+    c.phase += dt * (1.5 + Math.random() * 0.5);
+    c.vel.x += Math.sin(c.phase) * 0.6 * dt;
+    c.vel.z += Math.cos(c.phase * 0.7) * 0.6 * dt;
+    // Random direction changes
+    c.vel.x += (Math.random() - 0.5) * 0.8 * dt;
+    c.vel.z += (Math.random() - 0.5) * 0.8 * dt;
     // Subtle vertical bob
     c.vel.y += Math.sin(c.phase * 1.3) * 0.05 * dt;
     // Stay near ground
