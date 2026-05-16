@@ -680,8 +680,8 @@ document.getElementById('click-mode-btn').addEventListener('click', () => {
 
 // ── UI State ───────────────────────────────────
 let paused = false;
-const SPEED_OPTIONS = [1, 2, 5, 10];
-let speedIdx = 0; // default: ×1
+const SPEED_OPTIONS = [0.5, 1, 5, 10];
+let speedIdx = 1; // default: ×1
 let speedMultiplier = SPEED_OPTIONS[speedIdx];
 let elapsedSeconds = 0;
 
@@ -790,7 +790,7 @@ document.getElementById('reset-btn').addEventListener('click', () => {
   nutrients.length = 0;
   spawnCreature(new THREE.Vector3(0, 0.15, 0));
   paused = false;
-  setSpeed(0);
+  setSpeed(1);
   elapsedSeconds = 0;
   gameHours = 7;
   dayCount = 1;
