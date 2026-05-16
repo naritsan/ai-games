@@ -591,10 +591,14 @@ function updateCreatures(dt) {
     if (c.pos.y > 2.0) c.pos.y = 2.0;
 
     // Satiety & energy decay
-    c.satiety = Math.max(0, c.satiety - dt * c.satietyDecay);
     if (c.state === 'torpor') {
-      c.energy -= dt * 0.0008; // near-zero consumption
+      c.satiety = Math.max(0, c.satiety - dt * c.satietyDecay * 0.1);
+      c.energy -= dt * 0.0008;
+    } else if (c.state === 'resting') {
+      c.satiety = Math.max(0, c.satiety - dt * c.satietyDecay * 0.2);
+      c.energy -= dt * 0.001;
     } else {
+      c.satiety = Math.max(0, c.satiety - dt * c.satietyDecay);
       const hungerMult = c.satiety <= 0 ? 1.5 : 1.0;
       c.energy -= dt * 0.006 * hungerMult * (elderly ? 1.4 : 1.0);
       if (speed > 0 && c.state !== 'frantic') c.energy -= dt * speed * 0.0015;
