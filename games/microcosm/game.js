@@ -322,6 +322,7 @@ function spawnCreature(pos) {
     satietyDecay: 0.08 + Math.random() * 0.04, // ~2 game hours to deplete
     detectRange: 0.6 + Math.random() * 0.6,
     foodInRange: false,
+    attackCooldown: 0,
     ringMesh,
     reactionTime: 0.2 + Math.random() * 1.3,
     aggression: Math.random(), // 0=docile, 1=fierce
@@ -445,6 +446,7 @@ function updateCreatures(dt) {
     // Check nearby food (simple circular range)
     let nearestDist = c.detectRange;
     let nearestNutrient = null;
+    let nearestPrey = null;
     c.foodInRange = false;
     for (const n of nutrients) {
       const dist = c.pos.distanceTo(n.pos);
@@ -452,6 +454,20 @@ function updateCreatures(dt) {
       if (dist < nearestDist) {
         nearestDist = dist;
         nearestNutrient = n;
+      }
+    }
+
+    // Frantic creatures also target other creatures as prey
+    if (c.state === 'frantic') {
+      for (let j = 0; j < creatures.length; j++) {
+        if (i === j) continue;
+        const other = creatures[j];
+        const dist = c.pos.distanceTo(other.pos);
+        if (dist < c.detectRange && dist < nearestDist) {
+          nearestDist = dist;
+          nearestPrey = other;
+          nearestNutrient = null;
+        }
       }
     }
 
@@ -508,22 +524,24 @@ function updateCreatures(dt) {
         speed = 0;
         break;
 
-      case 'seeking':
-        if (nearestNutrient) {
-          const dist = c.pos.distanceTo(nearestNutrient.pos);
+      case 'seeking': {
+        const target = nearestPrey || nearestNutrient;
+        const targetPos = nearestPrey ? nearestPrey.pos : nearestNutrient ? nearestNutrient.pos : null;
+        if (targetPos) {
+          const dist = c.pos.distanceTo(targetPos);
           const desperate = c.satiety <= 0;
           const urgency = desperate ? 3.5 : (1 + (1 - Math.min(dist, c.detectRange) / c.detectRange) * 2);
           const closeFactor = desperate ? 1.0 : Math.min(1, dist / 0.8);
           speed = c.baseSpeed * 1.4 * urgency * speedMod * closeFactor;
-          targetAngle = angleToward(c.pos, nearestNutrient.pos);
+          targetAngle = angleToward(c.pos, targetPos);
           c.stateTimer = 0;
-          // Eating starts on contact in the shared eating block above
-          if (dist < 0.45) {
+          if (nearestNutrient && dist < 0.45) {
             c.foodNoticeAt = 0;
             continue;
           }
         }
         break;
+      }
 
       case 'torpor':
         speed = c.baseSpeed * 0.03;
@@ -579,14 +597,13 @@ function updateCreatures(dt) {
       c.pos.z += (Math.sin(c.heading) * speed + jitterZ) * dt;
     }
 
-    // Collision + aggression
+    // Collision + aggression + predation
     for (let j = 0; j < creatures.length; j++) {
       if (i === j) continue;
       const other = creatures[j];
       const d = c.pos.distanceTo(other.pos);
       const minDist = 0.5;
       if (d < minDist && d > 0.001) {
-        // Aggressive push: stronger from hungrier or more aggressive creatures
         const myForce = 1 + c.aggression * 2 + (1 - c.satiety) * 2;
         const theirForce = 1 + other.aggression * 2 + (1 - other.satiety) * 2;
         const ratio = myForce / (myForce + theirForce);
@@ -594,6 +611,32 @@ function updateCreatures(dt) {
         c.pos.x += (c.pos.x - other.pos.x) / d * pushMag * (1 - ratio) * dt;
         c.pos.z += (c.pos.z - other.pos.z) / d * pushMag * (1 - ratio) * dt;
         c.heading += (Math.random() - 0.5) * (c.state === 'frantic' ? 1.5 : 0.5);
+
+        // Frantic creatures attack others on contact
+        if (c.state === 'frantic' && !c.attackCooldown) {
+          other.energy -= 0.12;
+          other.satiety = Math.max(0, other.satiety - 0.1);
+          c.attackCooldown = 0.5;
+          // Push victim harder
+          other.pos.x += (other.pos.x - c.pos.x) / d * 0.3;
+          other.pos.z += (other.pos.z - c.pos.z) / d * 0.3;
+          // If victim dies, spawn food and feed attacker
+          if (other.energy <= 0) {
+            for (let k = 0; k < 3; k++) {
+              const p = new THREE.Vector3(
+                other.pos.x + (Math.random() - 0.5) * 0.3,
+                1.5 + Math.random() * 0.5,
+                other.pos.z + (Math.random() - 0.5) * 0.3
+              );
+              spawnNutrient(p, Math.random() < 0.5 ? 'm' : 'l');
+            }
+            c.energy = Math.min(1.5, c.energy + 0.3);
+            c.satiety = Math.min(1.0, c.satiety + 0.6);
+            c.satisfiedTimer = 2;
+            c.state = 'exploring';
+          }
+        }
+
         // Interrupt eating on strong push
         if (pushMag * (1 - ratio) * dt > 0.05 && c.state === 'eating') {
           c.state = 'exploring';
@@ -601,6 +644,7 @@ function updateCreatures(dt) {
         }
       }
     }
+    if (c.attackCooldown > 0) c.attackCooldown -= dt;
 
     const bobAmp = c.state === 'resting' ? 0.01 : 0.03;
     c.pos.y += Math.sin(c.phase * 1.8) * bobAmp * dt;
