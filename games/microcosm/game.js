@@ -173,11 +173,21 @@ scene.add(ring);
 
 // ── Nutrient System ────────────────────────────
 const nutrients = [];
-const nutrientGeo = new THREE.SphereGeometry(0.08, 8, 8);
-const nutrientMat = new THREE.MeshBasicMaterial({ color: '#ffdd88' });
+const NUTRIENT_DEFS = {
+  s: { radius: 0.05, eatTime: 0.4,  energy: 0.08, color: '#ffffbb' },
+  m: { radius: 0.10, eatTime: 1.0,  energy: 0.15, color: '#ffcc66' },
+  l: { radius: 0.16, eatTime: 2.5,  energy: 0.30, color: '#ff8833' },
+};
 
-function spawnNutrient(pos) {
-  const mesh = new THREE.Mesh(nutrientGeo, nutrientMat.clone());
+const nutrientGeos = {
+  s: new THREE.SphereGeometry(0.05, 6, 6),
+  m: new THREE.SphereGeometry(0.10, 8, 8),
+  l: new THREE.SphereGeometry(0.16, 10, 10),
+};
+
+function spawnNutrient(pos, size) {
+  const def = NUTRIENT_DEFS[size];
+  const mesh = new THREE.Mesh(nutrientGeos[size], new THREE.MeshBasicMaterial({ color: def.color }));
   mesh.position.copy(pos);
   scene.add(mesh);
   nutrients.push({
@@ -185,12 +195,24 @@ function spawnNutrient(pos) {
     vel: new THREE.Vector3(0, -0.05, 0),
     mesh,
     life: 30,
+    size,
+    claimedBy: null,
+    eatProgress: 0,
+    eatTime: def.eatTime,
+    energy: def.energy,
   });
+}
+
+function randomNutrientSize() {
+  const r = Math.random();
+  return r < 0.55 ? 's' : r < 0.85 ? 'm' : 'l';
 }
 
 function updateNutrients(dt) {
   for (let i = nutrients.length - 1; i >= 0; i--) {
     const n = nutrients[i];
+    if (n.claimedBy) continue; // locked while being eaten
+
     n.life -= dt;
     if (n.life <= 0) {
       scene.remove(n.mesh);
@@ -198,23 +220,21 @@ function updateNutrients(dt) {
       continue;
     }
 
-    // Gravity
-    n.vel.y -= 9.8 * dt;
+    // Gravity (heavier = faster fall)
+    const gravScale = n.size === 'l' ? 1.4 : n.size === 'm' ? 1.1 : 0.8;
+    n.vel.y -= 9.8 * gravScale * dt;
 
     // Brownian sway
     n.vel.x += (Math.random() - 0.5) * 0.02;
     n.vel.z += (Math.random() - 0.5) * 0.02;
 
-    // Fall and move
     n.pos.x += n.vel.x * dt;
     n.pos.y += n.vel.y * dt;
     n.pos.z += n.vel.z * dt;
 
-    // Damping
     n.vel.x *= 0.98;
     n.vel.z *= 0.98;
 
-    // Stop at floor
     if (n.pos.y <= 0.1) {
       n.pos.y = 0.1;
       n.vel.y = 0;
@@ -222,13 +242,11 @@ function updateNutrients(dt) {
       n.vel.z *= 0.9;
     }
 
-    // Clamp to arena horizontal bounds
-    n.pos.x = Math.max(-ARENA_HALF + 0.1, Math.min(ARENA_HALF - 0.1, n.pos.x));
-    n.pos.z = Math.max(-ARENA_HALF + 0.1, Math.min(ARENA_HALF - 0.1, n.pos.z));
+    n.pos.x = Math.max(-ARENA_HALF + 0.2, Math.min(ARENA_HALF - 0.2, n.pos.x));
+    n.pos.z = Math.max(-ARENA_HALF + 0.2, Math.min(ARENA_HALF - 0.2, n.pos.z));
 
     n.mesh.position.copy(n.pos);
 
-    // Fade near end of life
     if (n.life < 5) {
       n.mesh.material.opacity = n.life / 5;
       n.mesh.material.transparent = true;
@@ -249,7 +267,6 @@ const creatureMat = new THREE.MeshStandardMaterial({
 
 function spawnCreature(pos) {
   const mat = creatureMat.clone();
-  // Individual color variation — slightly different greens
   const hueShift = (Math.random() - 0.5) * 0.1;
   mat.color.setRGB(0.2 + hueShift, 0.7 + Math.random() * 0.2, 0.05);
   mat.emissive.setRGB(0.05, 0.1, 0);
@@ -274,12 +291,17 @@ function spawnCreature(pos) {
     metabolism: 0.03 + Math.random() * 0.025,
     detectRange: 2.5 + Math.random() * 1.5,
     reactionTime: 0.2 + Math.random() * 1.3,
+    // Growth & lifespan
+    growth: 0.2 + Math.random() * 0.15,
+    maxAge: 80 + Math.random() * 80,
     // State
     state: 'exploring',
     stateTimer: 2 + Math.random() * 3,
     restTimer: 0,
     satisfiedTimer: 0,
     wanderTarget: null,
+    eatingTarget: null,
+    eatingProgress: 0,
   });
 }
 
@@ -291,10 +313,57 @@ function updateCreatures(dt) {
     c.phase += dt * (1.5 + Math.random() * 0.5);
     c.satisfiedTimer = Math.max(0, c.satisfiedTimer - dt);
 
+    // ── Growth ──────────────────────────────────────
+    if (c.energy > 0.8 && c.growth < 1.0) {
+      c.growth = Math.min(1.0, c.growth + dt * 0.015);
+    }
+
+    // ── Aging ───────────────────────────────────────
+    const elderly = c.age > c.maxAge * 0.8;
+    const dying = c.age > c.maxAge;
+    if (dying) c.energy -= dt * 0.06; // rapid decline past maxAge
+
+    // ── Eating state ────────────────────────────────
+    if (c.state === 'eating') {
+      const n = c.eatingTarget;
+      // Check if food still valid
+      if (!n || n.claimedBy !== c || !nutrients.includes(n)) {
+        c.eatingTarget = null;
+        c.eatingProgress = 0;
+        c.state = 'exploring';
+        c.stateTimer = 1 + Math.random() * 2;
+      } else {
+        // Progress eating
+        c.eatingProgress += dt / n.eatTime;
+        // Pulse while eating
+        c.mesh.scale.setScalar(1 + Math.sin(c.phase * 6) * 0.08);
+        if (c.eatingProgress >= 1) {
+          // Finished eating
+          c.energy = Math.min(1.5, c.energy + n.energy);
+          c.eatFlash = 0.5;
+          c.wanderTarget = null;
+          c.foodNoticeAt = 0;
+          c.satisfiedTimer = 1.5 + Math.random() * 2;
+          scene.remove(n.mesh);
+          nutrients.splice(nutrients.indexOf(n), 1);
+          c.eatingTarget = null;
+          c.eatingProgress = 0;
+          c.state = 'exploring';
+          c.stateTimer = 2 + Math.random() * 3;
+        }
+      }
+      // Skip normal update while eating (stay in place)
+      c.mesh.position.copy(c.pos);
+      continue;
+    }
+
+    c.eatingTarget = null;
+    c.eatingProgress = 0;
+
     // ── State transitions ──────────────────────────
     const energyRatio = c.energy / 1.5;
+    const speedMod = elderly ? 0.5 : 1.0;
 
-    // Lethargic when energy very low
     if (energyRatio < 0.2 && c.state !== 'lethargic') {
       c.state = 'lethargic';
       c.stateTimer = 0;
@@ -304,10 +373,11 @@ function updateCreatures(dt) {
       c.stateTimer = 1 + Math.random() * 2;
     }
 
-    // Check for nearby food
+    // Check nearby food (unclaimed only)
     let nearestDist = c.detectRange;
     let nearestNutrient = null;
     for (const n of nutrients) {
+      if (n.claimedBy) continue;
       const dist = c.pos.distanceTo(n.pos);
       if (dist < nearestDist) {
         nearestDist = dist;
@@ -315,8 +385,7 @@ function updateCreatures(dt) {
       }
     }
 
-    // Food reaction with delay
-    if (nearestNutrient && c.state !== 'lethargic') {
+    if (nearestNutrient && c.state !== 'lethargic' && c.state !== 'eating') {
       if (c.foodNoticeAt === 0) c.foodNoticeAt = c.age + c.reactionTime;
       if (c.age >= c.foodNoticeAt && c.state !== 'seeking') {
         c.state = 'seeking';
@@ -328,7 +397,7 @@ function updateCreatures(dt) {
       c.stateTimer = 1 + Math.random() * 2;
     }
 
-    // Resting — random pauses
+    // Resting
     if (c.state === 'exploring' && c.satisfiedTimer <= 0) {
       c.stateTimer -= dt;
       if (c.stateTimer <= 0) {
@@ -336,7 +405,6 @@ function updateCreatures(dt) {
         c.restTimer = 1 + Math.random() * 3;
       }
     }
-
     if (c.state === 'resting') {
       c.restTimer -= dt;
       if (c.restTimer <= 0) {
@@ -347,7 +415,7 @@ function updateCreatures(dt) {
 
     if (c.state === 'seeking') {
       c.stateTimer -= dt;
-      if (c.stateTimer < -3 && !nearestNutrient) {
+      if (c.stateTimer < -5 && !nearestNutrient) {
         c.state = 'exploring';
         c.stateTimer = 2;
         c.foodNoticeAt = 0;
@@ -360,10 +428,8 @@ function updateCreatures(dt) {
 
     switch (c.state) {
       case 'lethargic':
-        speed = c.baseSpeed * 0.25 * energyRatio;
-        if (!c.wanderTarget || c.pos.distanceTo(c.wanderTarget) < 0.3) {
-          pickWanderTarget(c);
-        }
+        speed = c.baseSpeed * 0.25 * energyRatio * speedMod;
+        if (!c.wanderTarget || c.pos.distanceTo(c.wanderTarget) < 0.3) pickWanderTarget(c);
         targetAngle = angleToward(c.pos, c.wanderTarget);
         break;
 
@@ -375,32 +441,37 @@ function updateCreatures(dt) {
         if (nearestNutrient) {
           const dist = c.pos.distanceTo(nearestNutrient.pos);
           const urgency = 1 + (1 - Math.min(dist, c.detectRange) / c.detectRange) * 2;
-          speed = c.baseSpeed * 1.4 * urgency;
+          speed = c.baseSpeed * 1.4 * urgency * speedMod;
           targetAngle = angleToward(c.pos, nearestNutrient.pos);
           c.stateTimer = 0;
+          // Start eating on contact
+          if (dist < 0.35 && !nearestNutrient.claimedBy) {
+            nearestNutrient.claimedBy = c;
+            c.eatingTarget = nearestNutrient;
+            c.eatingProgress = 0;
+            c.state = 'eating';
+            c.foodNoticeAt = 0;
+            continue;
+          }
         }
         break;
 
       case 'exploring':
       default: {
-        speed = c.baseSpeed * (0.6 + energyRatio * 0.5);
+        speed = c.baseSpeed * (0.6 + energyRatio * 0.5) * speedMod;
         if (c.satisfiedTimer > 0) speed *= 0.5;
-        if (!c.wanderTarget || c.pos.distanceTo(c.wanderTarget) < 0.3) {
-          pickWanderTarget(c);
-        }
+        if (!c.wanderTarget || c.pos.distanceTo(c.wanderTarget) < 0.3) pickWanderTarget(c);
         targetAngle = angleToward(c.pos, c.wanderTarget);
         break;
       }
     }
 
-    // Smoothly rotate heading toward target (curved movement)
     let angleDiff = targetAngle - c.heading;
     while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
     while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
     const turnRate = 2.5 + Math.random() * 0.5;
     c.heading += Math.sign(angleDiff) * Math.min(Math.abs(angleDiff), turnRate * dt);
 
-    // Move forward in heading direction
     if (speed > 0) {
       const jitterX = (Math.random() - 0.5) * speed * 0.3;
       const jitterZ = (Math.random() - 0.5) * speed * 0.3;
@@ -408,7 +479,7 @@ function updateCreatures(dt) {
       c.pos.z += (Math.sin(c.heading) * speed + jitterZ) * dt;
     }
 
-    // Creature-creature avoidance
+    // Collision avoidance
     for (let j = 0; j < creatures.length; j++) {
       if (i === j) continue;
       const other = creatures[j];
@@ -419,34 +490,13 @@ function updateCreatures(dt) {
         const pushZ = (c.pos.z - other.pos.z) / d * (minDist - d) * 1.5;
         c.pos.x += pushX * dt;
         c.pos.z += pushZ * dt;
-        // Deflect heading
         c.heading += (Math.random() - 0.5) * 0.5;
       }
     }
 
-    // Subtle bouncy vertical motion
     const bobAmp = c.state === 'resting' ? 0.01 : 0.03;
     c.pos.y += Math.sin(c.phase * 1.8) * bobAmp * dt;
     if (c.pos.y > 0.2) c.pos.y -= 0.2 * dt;
-
-    // Eat nutrients
-    for (let j = nutrients.length - 1; j >= 0; j--) {
-      const n = nutrients[j];
-      const dist = c.pos.distanceTo(n.pos);
-      if (dist < 0.35) {
-        c.energy = Math.min(1.5, c.energy + 0.15);
-        c.eatFlash = 0.5;
-        c.wanderTarget = null;
-        c.foodNoticeAt = 0;
-        c.satisfiedTimer = 1.5 + Math.random() * 2;
-        if (c.state === 'seeking') {
-          c.state = 'exploring';
-          c.stateTimer = 2 + Math.random() * 3;
-        }
-        scene.remove(n.mesh);
-        nutrients.splice(j, 1);
-      }
-    }
 
     // Bounds
     const bound = ARENA_HALF - 0.3;
@@ -456,14 +506,13 @@ function updateCreatures(dt) {
     if (c.pos.z < -bound) { c.pos.z = -bound; c.heading = Math.PI / 2; }
     if (c.pos.y > 2.0) c.pos.y = 2.0;
 
-    // Energy decay
-    c.energy -= dt * c.metabolism;
+    c.energy -= dt * (c.metabolism * (elderly ? 1.4 : 1.0));
 
     // ── Visual ──────────────────────────────────────
+    const growthSize = 0.5 + c.growth * 0.7;
     const energyScale = 0.7 + c.energy * 0.4;
     const flashBoost = c.eatFlash > 0 ? 1 + c.eatFlash * 0.5 : 1;
-    let scale = energyScale * flashBoost;
-    // Pulsing when resting
+    let scale = growthSize * energyScale * flashBoost;
     if (c.state === 'resting') {
       scale *= 0.95 + Math.sin(c.phase * 3) * 0.05;
     }
@@ -472,7 +521,6 @@ function updateCreatures(dt) {
     const radius = 0.2 * scale;
     if (c.pos.y < radius) c.pos.y = radius;
 
-    // Color based on energy (preserve individual hue base in bright green range)
     const t = Math.max(0, Math.min(1, c.energy / 1.5));
     c.mesh.material.color.setRGB(1 - t, t * 0.85, 0);
     c.mesh.material.emissive.setRGB((1 - t) * 0.3, t * 0.22, 0);
@@ -480,6 +528,8 @@ function updateCreatures(dt) {
     // Death
     if (c.energy <= 0) {
       scene.remove(c.mesh);
+      // Release claimed nutrient
+      if (c.eatingTarget) c.eatingTarget.claimedBy = null;
       creatures.splice(i, 1);
       continue;
     }
@@ -532,7 +582,7 @@ renderer.domElement.addEventListener('click', (e) => {
           1.5 + Math.random() * 0.5,
           z + (Math.random() - 0.5) * 0.15
         );
-        spawnNutrient(p);
+        spawnNutrient(p, randomNutrientSize());
       }
     }
   }
@@ -552,6 +602,8 @@ function refreshDetails() {
     const r = Math.floor((1 - t) * 255);
     const g = Math.floor(t * 200);
     const pct = (c.energy * 100).toFixed(0);
+    const ageStr = c.age > c.maxAge ? 'Dying' : c.age > c.maxAge * 0.8 ? 'Elderly' : c.growth < 1 ? 'Growing' : 'Adult';
+    const stateLabel = c.state.charAt(0).toUpperCase() + c.state.slice(1);
     html += `<div class="detail-card">
       <div class="detail-header">
         <div class="creature-dot" style="background:rgb(${r},${g},0);box-shadow:0 0 8px rgb(${r},${g},0)"></div>
@@ -559,11 +611,11 @@ function refreshDetails() {
       </div>
       <div class="detail-grid">
         <div>Vitality <span>${pct}%</span></div>
-        <div>Age <span>${Math.floor(c.age)}s</span></div>
-        <div>Energy <span>${c.energy.toFixed(3)}</span></div>
+        <div>Age <span>${Math.floor(c.age)}s / ${Math.floor(c.maxAge)}s</span></div>
+        <div>Growth <span>${(c.growth * 100).toFixed(0)}%</span></div>
+        <div>Stage <span>${ageStr}</span></div>
+        <div>State <span>${stateLabel}</span></div>
         <div>Position <span>${c.pos.x.toFixed(1)}, ${c.pos.z.toFixed(1)}</span></div>
-        <div style="color:${pct > 30 ? '#888' : '#e44'}">Status <span>${pct > 50 ? 'Healthy' : pct > 20 ? 'Weakening' : 'Dying'}</span></div>
-        <div>Food eaten <span>${Math.max(0, Math.floor((c.energy - 1.0) / 0.15))}</span></div>
         <div class="detail-bar-bg"><div class="detail-bar-fill" style="width:${pct}%;background:rgb(${r},${g},0)"></div></div>
       </div>
     </div>`;
@@ -618,7 +670,7 @@ document.getElementById('sprinkle-btn').addEventListener('click', () => {
       1.5 + Math.random() * 1.0,
       (Math.random() - 0.5) * (ARENA_HALF * 2 - 1)
     );
-    spawnNutrient(p);
+    spawnNutrient(p, randomNutrientSize());
   }
 });
 
