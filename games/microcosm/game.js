@@ -385,7 +385,7 @@ function updateCreatures(dt) {
       }
       c.phase += dt * 3;
       c.satiety -= dt * c.satietyDecay;
-      if (c.satiety < 0.2) c.energy -= dt * 0.06;
+      if (c.satiety < 0.2) c.energy -= dt * 0.015;
       c.mesh.position.copy(c.pos);
       continue;
     }
@@ -556,12 +556,12 @@ function updateCreatures(dt) {
 
     // Satiety & energy decay
     c.satiety = Math.max(0, c.satiety - dt * c.satietyDecay);
-    const hunger = 1 - c.satiety; // 0=full, 1=starving
+    const hunger = 1 - c.satiety;
     if (c.satiety < 0.3) {
-      c.energy -= dt * (0.03 + hunger * 0.06) * (elderly ? 1.4 : 1.0);
+      c.energy -= dt * (0.008 + hunger * 0.015) * (elderly ? 1.4 : 1.0);
     }
     // Movement costs energy
-    if (speed > 0) c.energy -= dt * speed * 0.008;
+    if (speed > 0) c.energy -= dt * speed * 0.003;
 
     // ── Visual ──────────────────────────────────────
     const growthSize = 0.5 + c.growth * 0.7;
