@@ -297,6 +297,33 @@ function spawnCreature(pos) {
   mesh.castShadow = true;
   scene.add(mesh);
 
+  // Perception fan (flat wedge on ground, wider forward)
+  const fanGeo = new THREE.BufferGeometry();
+  const fanSegments = 12;
+  const fanVerts = [];
+  const fanFront = 1.0; // base radius, scaled later
+  // Center point
+  fanVerts.push(0, 0.03, 0);
+  // Arc points from -90° to +90° (forward hemisphere)
+  for (let s = 0; s <= fanSegments; s++) {
+    const a = -Math.PI / 2 + (Math.PI / fanSegments) * s;
+    fanVerts.push(Math.cos(a) * fanFront, 0.03, Math.sin(a) * fanFront);
+  }
+  fanGeo.setAttribute('position', new THREE.Float32BufferAttribute(fanVerts, 3));
+  // Indices: triangle fan from center
+  const fanIdx = [];
+  for (let s = 0; s < fanSegments; s++) {
+    fanIdx.push(0, s + 1, s + 2);
+  }
+  fanGeo.setIndex(fanIdx);
+  fanGeo.computeVertexNormals();
+  const fanMat = new THREE.MeshBasicMaterial({ color: '#aaccff', transparent: true, opacity: 0.12, depthWrite: false, side: THREE.DoubleSide });
+  const fanMesh = new THREE.Mesh(fanGeo, fanMat);
+  fanMesh.rotation.x = -Math.PI / 2;
+  fanMesh.position.copy(pos);
+  fanMesh.position.y = 0.03;
+  scene.add(fanMesh);
+
   const baseSpeed = 0.5 + Math.random() * 0.7;
   creatures.push({
     pos: pos.clone(),
@@ -312,6 +339,7 @@ function spawnCreature(pos) {
     baseSpeed,
     satietyDecay: 0.08 + Math.random() * 0.04, // ~2 game hours to deplete
     detectRange: 0.3 + Math.random() * 0.3,
+    fanMesh,
     reactionTime: 0.2 + Math.random() * 1.3,
     aggression: Math.random(), // 0=docile, 1=fierce
     // Growth & lifespan
@@ -324,6 +352,10 @@ function spawnCreature(pos) {
     satisfiedTimer: 0,
     wanderTarget: null,
   });
+  // Scale fan: x = forward range, z = width
+  const fr = creatures[creatures.length - 1].detectRange * 1.6;
+  const rr = creatures[creatures.length - 1].detectRange * 0.7;
+  fanMesh.scale.set(fr, rr, 1);
 }
 
 function updateCreatures(dt) {
@@ -649,9 +681,16 @@ function updateCreatures(dt) {
     c.mesh.material.opacity = c.state === 'torpor' ? 0.4 : 1;
     c.mesh.material.transparent = c.state === 'torpor';
 
+    // Perception fan — follow creature, face heading
+    c.fanMesh.position.copy(c.pos);
+    c.fanMesh.position.y = 0.03;
+    c.fanMesh.rotation.y = c.heading - Math.PI / 2;
+    c.fanMesh.material.opacity = (c.state === 'seeking' || c.state === 'frantic') ? 0.3 : 0.08;
+
     // Death
     if (c.energy <= 0) {
       scene.remove(c.mesh);
+      scene.remove(c.fanMesh);
       creatures.splice(i, 1);
       continue;
     }
