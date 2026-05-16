@@ -159,20 +159,34 @@ function updateCreatures(dt) {
     c.age += dt;
     c.eatFlash = Math.max(0, c.eatFlash - dt);
 
-    // 1. Drift — active random wandering on the ground plane
-    c.phase += dt * (1.5 + Math.random() * 0.5);
-    c.vel.x += Math.sin(c.phase) * 0.6 * dt;
-    c.vel.z += Math.cos(c.phase * 0.7) * 0.6 * dt;
-    // Random direction changes
-    c.vel.x += (Math.random() - 0.5) * 0.8 * dt;
-    c.vel.z += (Math.random() - 0.5) * 0.8 * dt;
+    // 1. Wander — pick random targets when idle
+    if (!c.wanderTarget || c.pos.distanceTo(c.wanderTarget) < 0.5) {
+      const angle = Math.random() * Math.PI * 2;
+      const dist = 1 + Math.random() * 4;
+      c.wanderTarget = new THREE.Vector3(
+        Math.cos(angle) * dist,
+        0.15,
+        Math.sin(angle) * dist
+      );
+    }
+    // Move toward wander target with some noise
+    const toTarget = new THREE.Vector3().copy(c.wanderTarget).sub(c.pos);
+    toTarget.y = 0;
+    const targetDist = toTarget.length();
+    if (targetDist > 0.1) {
+      toTarget.normalize();
+      c.vel.x += toTarget.x * 1.5 * dt;
+      c.vel.z += toTarget.z * 1.5 * dt;
+    }
+    // Brownian noise on top
+    c.vel.x += (Math.random() - 0.5) * 0.6 * dt;
+    c.vel.z += (Math.random() - 0.5) * 0.6 * dt;
     // Subtle vertical bob
     c.vel.y += Math.sin(c.phase * 1.3) * 0.05 * dt;
-    // Stay near ground
     if (c.pos.y > 0.2) c.vel.y -= 0.2 * dt;
 
-    // 2. Seek nearest nutrient within radius 2.0
-    let nearestDist = 2.0;
+    // 2. Seek nearest nutrient — overrides wander when food is near
+    let nearestDist = 3.0;
     let nearestNutrient = null;
     for (const n of nutrients) {
       const dist = c.pos.distanceTo(n.pos);
@@ -187,8 +201,9 @@ function updateCreatures(dt) {
         .copy(nearestNutrient.pos)
         .sub(c.pos)
         .normalize();
-      c.vel.x += dir.x * 1.0 * dt;
-      c.vel.z += dir.z * 1.0 * dt;
+      const urgency = 1 + (1 - nearestDist / 3.0) * 2;
+      c.vel.x += dir.x * 2.0 * urgency * dt;
+      c.vel.z += dir.z * 2.0 * urgency * dt;
       c.vel.y += dir.y * 0.3 * dt;
     }
 
@@ -199,15 +214,17 @@ function updateCreatures(dt) {
       if (dist < 0.3) {
         c.energy = Math.min(1.5, c.energy + 0.15);
         c.eatFlash = 0.5;
+        c.wanderTarget = null;
         scene.remove(n.mesh);
         nutrients.splice(j, 1);
       }
     }
 
-    // 4. Move with damping
-    c.vel.x *= 0.94;
+    // 4. Move with lighter damping
+    c.vel.x *= 0.985;
     c.vel.y *= 0.94;
-    c.vel.z *= 0.94;
+    c.vel.z *= 0.985;
+    c.phase += dt * 2;
     c.pos.x += c.vel.x * dt;
     c.pos.y += c.vel.y * dt;
     c.pos.z += c.vel.z * dt;
