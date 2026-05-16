@@ -38,11 +38,6 @@ const sun = new THREE.DirectionalLight('#ffffff', 1.0);
 sun.position.set(5, 8, 3);
 scene.add(sun);
 
-// Night fill light (dim blue, faces upward for subtle ground visibility)
-const moonLight = new THREE.PointLight('#334466', 3, 12, 2);
-moonLight.position.set(0, 4, 0);
-scene.add(moonLight);
-
 // ── Celestial Bodies ────────────────────────────
 // Sun
 const sunGeo = new THREE.SphereGeometry(0.5, 16, 16);
@@ -88,17 +83,17 @@ const starMat = new THREE.PointsMaterial({
 const stars = new THREE.Points(starGeo, starMat);
 scene.add(stars);
 
-// ── Time-of-Day Presets ─────────────────────────
+// ── Time-of-Day Presets (visual only — lighting stays constant) ──
 const TIME_KEYFRAMES = [
-  { h: 0,  bg: '#0f0f24', fog: '#0f0f24', amb: '#334466', ambI: 0.22, sun: '#334466', sunI: 0.0, moonI: 1.2 },
-  { h: 5,  bg: '#2a2040', fog: '#2a2040', amb: '#556688', ambI: 0.3,  sun: '#996644', sunI: 0.2, moonI: 0.6 },
-  { h: 6,  bg: '#d49060', fog: '#c8a090', amb: '#aa8866', ambI: 0.45, sun: '#ffbb77', sunI: 0.8, moonI: 0.0 },
-  { h: 8,  bg: '#a0d8f0', fog: '#a0c8e0', amb: '#ffffff', ambI: 0.5,  sun: '#ffffdd', sunI: 1.1, moonI: 0.0 },
-  { h: 12, bg: '#7ec8e3', fog: '#a0c8e0', amb: '#ffffff', ambI: 0.5,  sun: '#ffffff', sunI: 1.2, moonI: 0.0 },
-  { h: 16, bg: '#a0d0e8', fog: '#a0c0d8', amb: '#ffffff', ambI: 0.45, sun: '#ffeedd', sunI: 1.0, moonI: 0.0 },
-  { h: 18, bg: '#e88850', fog: '#d09080', amb: '#aa8866', ambI: 0.45, sun: '#ff8844', sunI: 0.8, moonI: 0.0 },
-  { h: 20, bg: '#1a1030', fog: '#1a1030', amb: '#445577', ambI: 0.3,  sun: '#443355', sunI: 0.08, moonI: 0.7 },
-  { h: 24, bg: '#0f0f24', fog: '#0f0f24', amb: '#334466', ambI: 0.22, sun: '#334466', sunI: 0.0, moonI: 1.2 },
+  { h: 0,  bg: '#0f0f24', fog: '#0f0f24' },
+  { h: 5,  bg: '#2a2040', fog: '#2a2040' },
+  { h: 6,  bg: '#d49060', fog: '#c8a090' },
+  { h: 8,  bg: '#a0d8f0', fog: '#a0c8e0' },
+  { h: 12, bg: '#7ec8e3', fog: '#a0c8e0' },
+  { h: 16, bg: '#a0d0e8', fog: '#a0c0d8' },
+  { h: 18, bg: '#e88850', fog: '#d09080' },
+  { h: 20, bg: '#1a1030', fog: '#1a1030' },
+  { h: 24, bg: '#0f0f24', fog: '#0f0f24' },
 ];
 
 function lerpColor(a, b, t) {
@@ -106,11 +101,8 @@ function lerpColor(a, b, t) {
   return ac.lerp(bc, t);
 }
 
-function lerpNum(a, b, t) { return a + (b - a) * t; }
-
 function updateTimeOfDay() {
   const h = gameHours;
-  // Find surrounding keyframes
   let prev = TIME_KEYFRAMES[0], next = TIME_KEYFRAMES[TIME_KEYFRAMES.length - 1];
   for (let i = 0; i < TIME_KEYFRAMES.length - 1; i++) {
     if (h >= TIME_KEYFRAMES[i].h && h <= TIME_KEYFRAMES[i + 1].h) {
@@ -122,28 +114,23 @@ function updateTimeOfDay() {
   const range = next.h - prev.h;
   const t = range > 0 ? (h - prev.h) / range : 0;
 
+  // Only background and fog change — lighting stays constant
   scene.background = lerpColor(prev.bg, next.bg, t);
   scene.fog.color = lerpColor(prev.fog, next.fog, t);
-  ambient.color = lerpColor(prev.amb, next.amb, t);
-  ambient.intensity = lerpNum(prev.ambI, next.ambI, t);
-  sun.color = lerpColor(prev.sun, next.sun, t);
-  sun.intensity = lerpNum(prev.sunI, next.sunI, t);
-  moonLight.intensity = lerpNum(prev.moonI, next.moonI, t) * 3;
 
-  // Sun angle: rises in east (-X side), peaks overhead, sets in west (+X side)
+  // Sun angle: rises east (-X), sets west (+X)
   const sunAngle = -(h / 24) * Math.PI * 2 + Math.PI / 2;
   const sunDist = 8;
-  sun.position.set(Math.cos(sunAngle) * sunDist, Math.sin(sunAngle) * sunDist + 2, -3);
 
-  // Sun mesh follows directional light, visible when above horizon
+  // Sun mesh — visible when above horizon
+  sunMesh.position.set(Math.cos(sunAngle) * sunDist, Math.sin(sunAngle) * sunDist + 2, -3);
   const sunY = Math.sin(sunAngle);
-  sunMesh.position.copy(sun.position);
   sunMesh.visible = sunY > -0.05;
   sunMesh.material.opacity = Math.max(0, Math.min(1, sunY * 4));
   sunMesh.material.transparent = true;
   glowMesh.visible = sunY > 0.1;
 
-  // Moon: opposite side of sky from sun
+  // Moon — opposite side of sky
   const moonAngle = sunAngle + Math.PI;
   const moonDist = 7;
   moonMesh.position.set(Math.cos(moonAngle) * moonDist, Math.sin(moonAngle) * moonDist + 2, -2);
@@ -152,9 +139,8 @@ function updateTimeOfDay() {
   moonMesh.material.opacity = Math.max(0, Math.min(1, moonY * 3));
   moonMesh.material.transparent = true;
 
-  // Stars: visible at night, fade with moonlight
-  const nightFactor = moonLight.intensity;
-  stars.material.opacity = nightFactor * 0.8;
+  // Stars — visible when moon is up
+  stars.material.opacity = moonMesh.visible ? moonMesh.material.opacity * 0.8 : 0;
 }
 
 // ── Arena Ground ────────────────────────────────
