@@ -35,44 +35,15 @@ scene.add(sun);
 // ── Arena Ground ────────────────────────────────
 const ARENA_HALF = 5;
 
-// Procedural dirt texture
-function makeGroundTex() {
-  const c = document.createElement('canvas');
-  c.width = c.height = 256;
-  const ctx = c.getContext('2d');
-  // Base earth tone
-  ctx.fillStyle = '#8B7355';
-  ctx.fillRect(0, 0, 256, 256);
-  // Random speckles for dirt texture
-  const img = ctx.getImageData(0, 0, 256, 256);
-  for (let i = 0; i < img.data.length; i += 4) {
-    const n = (Math.random() - 0.5) * 40;
-    img.data[i] += n;     // R
-    img.data[i + 1] += n; // G
-    img.data[i + 2] += n; // B
-  }
-  ctx.putImageData(img, 0, 0);
-  // Add some subtle patches
-  for (let i = 0; i < 60; i++) {
-    const x = Math.random() * 256;
-    const y = Math.random() * 256;
-    const r = 5 + Math.random() * 25;
-    const shade = 90 + Math.random() * 60;
-    ctx.fillStyle = `rgba(${shade},${shade * 0.65},${shade * 0.35},0.25)`;
-    ctx.beginPath();
-    ctx.arc(x, y, r, 0, Math.PI * 2);
-    ctx.fill();
-  }
-  return new THREE.CanvasTexture(c);
-}
-
-const groundTex = makeGroundTex();
+const texLoader = new THREE.TextureLoader();
+const groundTex = texLoader.load('dirt_2.png');
 groundTex.wrapS = groundTex.wrapT = THREE.RepeatWrapping;
-groundTex.repeat.set(4, 4);
+groundTex.repeat.set(6, 6);
+groundTex.colorSpace = THREE.SRGBColorSpace;
 
 const ground = new THREE.Mesh(
   new THREE.PlaneGeometry(ARENA_HALF * 2 + 2, ARENA_HALF * 2 + 2),
-  new THREE.MeshStandardMaterial({ map: groundTex, roughness: 0.9, color: '#cccccc' })
+  new THREE.MeshStandardMaterial({ map: groundTex, roughness: 0.85 })
 );
 ground.rotation.x = -Math.PI / 2;
 ground.position.y = 0;
