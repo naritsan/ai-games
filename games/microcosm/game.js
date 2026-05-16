@@ -910,9 +910,17 @@ function updateStatusPanel() {
     const g = Math.floor(t * 200);
     const dotColor = `rgb(${r},${g},0)`;
     const stateLabel = c.state === 'torpor' ? 'TOR' : c.state === 'frantic' ? 'FRN' : c.state === 'lethargic' ? 'LET' : c.state === 'eating' ? 'EAT' : c.state === 'resting' ? 'RST' : '';
+    const vitPct = Math.floor((c.energy / 1.5) * 100);
+    const satPct = Math.floor(c.satiety * 100);
+    const vitColor = `rgb(${Math.floor((1 - c.energy/1.5) * 255)},${Math.floor((c.energy/1.5) * 200)},0)`;
+    const satColor = c.satiety > 0.3 ? '#88bb44' : c.satiety > 0 ? '#ddaa33' : '#dd4433';
     html += `<div class="creature-row">
       <div class="creature-dot" style="background:${dotColor};box-shadow:0 0 6px ${dotColor}"></div>
-      <div class="creature-stats">#${i + 1} &nbsp;VIT ${(c.energy * 100).toFixed(0)}% &nbsp;SAT ${(c.satiety * 100).toFixed(0)}% &nbsp;${stateLabel}</div>
+      <div class="creature-stats">
+        <div class="stat-line">#${i + 1} <span class="stat-label">${stateLabel}</span></div>
+        <div class="gauge-row"><span class="gauge-label">VIT</span><div class="gauge-bg"><div class="gauge-fill" style="width:${vitPct}%;background:${vitColor}"></div></div><span class="gauge-pct">${vitPct}%</span></div>
+        <div class="gauge-row"><span class="gauge-label">SAT</span><div class="gauge-bg"><div class="gauge-fill" style="width:${satPct}%;background:${satColor}"></div></div><span class="gauge-pct">${satPct}%</span></div>
+      </div>
     </div>`;
   }
   list.innerHTML = html;
