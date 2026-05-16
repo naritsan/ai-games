@@ -408,7 +408,7 @@ function updateCreatures(dt) {
     }
 
     // Frantic when hungry but still have energy
-    if (c.satiety < 0.3 && energyRatio > 0.08 && c.state !== 'frantic' && c.state !== 'eating' && c.state !== 'torpor') {
+    if (c.satiety <= 0 && energyRatio > 0.08 && c.state !== 'frantic' && c.state !== 'eating' && c.state !== 'torpor') {
       c.state = 'frantic';
       c.wanderTarget = null;
     }
@@ -497,7 +497,7 @@ function updateCreatures(dt) {
       case 'seeking':
         if (nearestNutrient) {
           const dist = c.pos.distanceTo(nearestNutrient.pos);
-          const desperate = c.satiety < 0.3;
+          const desperate = c.satiety <= 0;
           const urgency = desperate ? 3.5 : (1 + (1 - Math.min(dist, c.detectRange) / c.detectRange) * 2);
           const closeFactor = desperate ? 1.0 : Math.min(1, dist / 0.8);
           speed = c.baseSpeed * 1.4 * urgency * speedMod * closeFactor;
@@ -595,7 +595,7 @@ function updateCreatures(dt) {
     if (c.state === 'torpor') {
       c.energy -= dt * 0.0008; // near-zero consumption
     } else {
-      const hungerMult = c.satiety < 0.3 ? 1.5 : 1.0;
+      const hungerMult = c.satiety <= 0 ? 1.5 : 1.0;
       c.energy -= dt * 0.006 * hungerMult * (elderly ? 1.4 : 1.0);
       if (speed > 0 && c.state !== 'frantic') c.energy -= dt * speed * 0.0015;
     }
@@ -694,7 +694,7 @@ function refreshDetails() {
     const pct = (c.energy * 100).toFixed(0);
     const satPct = (c.satiety * 100).toFixed(0);
     const ageStr = c.age > c.maxAge ? 'Dying' : c.age > c.maxAge * 0.8 ? 'Elderly' : c.growth < 1 ? 'Growing' : 'Adult';
-    const stateLabel = c.state === 'torpor' ? 'Torpor' : c.state === 'frantic' ? 'Frantic' : c.state === 'lethargic' ? 'Lethargic' : c.satiety < 0.3 ? 'Hungry' : c.state.charAt(0).toUpperCase() + c.state.slice(1);
+    const stateLabel = c.state === 'torpor' ? 'Torpor' : c.state === 'frantic' ? 'Frantic' : c.state === 'lethargic' ? 'Lethargic' : c.satiety <= 0 ? 'Hungry' : c.state.charAt(0).toUpperCase() + c.state.slice(1);
     html += `<div class="detail-card">
       <div class="detail-header">
         <div class="creature-dot" style="background:rgb(${r},${g},0);box-shadow:0 0 8px rgb(${r},${g},0)"></div>
