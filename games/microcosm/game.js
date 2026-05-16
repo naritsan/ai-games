@@ -409,7 +409,7 @@ function updateCreatures(dt) {
       }
     }
 
-    if (nearestNutrient && c.state !== 'lethargic' && c.state !== 'eating') {
+    if (nearestNutrient && c.state !== 'eating') {
       if (c.foodNoticeAt === 0) c.foodNoticeAt = c.age + c.reactionTime;
       if (c.age >= c.foodNoticeAt && c.state !== 'seeking') {
         c.state = 'seeking';
