@@ -585,7 +585,7 @@ const clickPlane = new THREE.Plane().setFromNormalAndCoplanarPoint(
 );
 const intersectPt = new THREE.Vector3();
 
-let clickMode = 'feed'; // 'feed' | 'look'
+let clickMode = 'look'; // 'look' | 'feed'
 
 renderer.domElement.addEventListener('click', (e) => {
   if (e.target.closest('#palette') || e.target.closest('#status-panel')) return;
@@ -599,8 +599,7 @@ renderer.domElement.addEventListener('click', (e) => {
     const x = intersectPt.x;
     const z = intersectPt.z;
     if (Math.abs(x) < ARENA_HALF - 0.2 && Math.abs(z) < ARENA_HALF - 0.2) {
-      const count = 1 + Math.floor(Math.random() * 3);
-      for (let i = 0; i < count; i++) {
+      for (let i = 0; i < foodCount; i++) {
         const p = new THREE.Vector3(
           x + (Math.random() - 0.5) * 0.15,
           1.5 + Math.random() * 0.5,
@@ -681,14 +680,14 @@ document.getElementById('click-mode-btn').addEventListener('click', () => {
 
 // ── UI State ───────────────────────────────────
 let paused = false;
-const SPEED_OPTIONS = [0.5, 1, 2, 5, 10];
-let speedIdx = 1; // default: ×1
+const SPEED_OPTIONS = [1, 2, 5, 10];
+let speedIdx = 0; // default: ×1
 let speedMultiplier = SPEED_OPTIONS[speedIdx];
 let elapsedSeconds = 0;
 
 // Sprinkle
 document.getElementById('sprinkle-btn').addEventListener('click', () => {
-  for (let i = 0; i < 5; i++) {
+  for (let i = 0; i < foodCount; i++) {
     const p = new THREE.Vector3(
       (Math.random() - 0.5) * (ARENA_HALF * 2 - 1),
       1.5 + Math.random() * 1.0,
@@ -734,23 +733,19 @@ speedPopup.querySelectorAll('.speed-opt').forEach(btn => {
   });
 });
 
-// Food size selector
+// Food size + count selector
 let selectedFoodSize = 'm';
+let foodCount = 3;
 const foodsizeBtn = document.getElementById('foodsize-btn');
 const foodsizePopup = document.getElementById('foodsize-popup');
 
-function setFoodSize(size) {
-  selectedFoodSize = size;
-  const label = size === 'r' ? 'Random' : size.toUpperCase();
-  foodsizeBtn.textContent = `Food: ${label}`;
-  foodsizePopup.querySelectorAll('.speed-opt').forEach(b => {
-    b.classList.toggle('active', b.dataset.size === size);
-  });
-  foodsizePopup.classList.add('hidden');
-}
-
 function getFoodSize() {
   return selectedFoodSize === 'r' ? randomNutrientSize() : selectedFoodSize;
+}
+
+function updateFoodLabel() {
+  const label = selectedFoodSize === 'r' ? 'Random' : selectedFoodSize.toUpperCase();
+  foodsizeBtn.textContent = `Food: ${label} x${foodCount}`;
 }
 
 foodsizeBtn.addEventListener('click', (e) => {
@@ -758,10 +753,21 @@ foodsizeBtn.addEventListener('click', (e) => {
   foodsizePopup.classList.toggle('hidden');
 });
 
-foodsizePopup.querySelectorAll('.speed-opt').forEach(btn => {
+foodsizePopup.querySelectorAll('[data-size]').forEach(btn => {
   btn.addEventListener('click', (e) => {
     e.stopPropagation();
-    setFoodSize(btn.dataset.size);
+    selectedFoodSize = btn.dataset.size;
+    foodsizePopup.querySelectorAll('[data-size]').forEach(b => b.classList.toggle('active', b.dataset.size === selectedFoodSize));
+    updateFoodLabel();
+  });
+});
+
+foodsizePopup.querySelectorAll('[data-count]').forEach(btn => {
+  btn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    foodCount = parseInt(btn.dataset.count);
+    foodsizePopup.querySelectorAll('[data-count]').forEach(b => b.classList.toggle('active', parseInt(b.dataset.count) === foodCount));
+    updateFoodLabel();
   });
 });
 
@@ -784,7 +790,7 @@ document.getElementById('reset-btn').addEventListener('click', () => {
   nutrients.length = 0;
   spawnCreature(new THREE.Vector3(0, 0.15, 0));
   paused = false;
-  setSpeed(1);
+  setSpeed(0);
   elapsedSeconds = 0;
   gameHours = 7;
   dayCount = 1;

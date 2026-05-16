@@ -109,12 +109,18 @@ canvas {
   left: 50%;
   transform: translateX(-50%);
   display: flex;
+  flex-direction: column;
   gap: 4px;
   background: rgba(10, 20, 30, 0.95);
   border: 1px solid rgba(255,255,255,0.2);
   border-radius: 8px;
   padding: 6px;
   backdrop-filter: blur(12px);
+}
+
+.popup-row {
+  display: flex;
+  gap: 4px;
 }
 
 #speed-popup.hidden, #foodsize-popup.hidden {
