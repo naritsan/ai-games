@@ -533,10 +533,17 @@ function updateCreatures(dt) {
         break;
 
       case 'frantic':
-        // Charge mostly straight, occasional random swerves
+        // Charge mostly straight, occasional swerves, rarely random direction
         speed = c.baseSpeed * 3.0 * speedMod;
         if (!c.wanderTarget || c.pos.distanceTo(c.wanderTarget) < 0.4 || Math.random() < 0.02) {
-          const angle = c.heading + (Math.random() - 0.5) * 1.2;
+          let angle;
+          if (Math.random() < 0.15) {
+            // Complete random direction change
+            angle = Math.random() * Math.PI * 2;
+          } else {
+            // Swerve within forward cone
+            angle = c.heading + (Math.random() - 0.5) * 1.2;
+          }
           c.wanderTarget = new THREE.Vector3(
             c.pos.x + Math.cos(angle) * 5, 0.15,
             c.pos.z + Math.sin(angle) * 5
