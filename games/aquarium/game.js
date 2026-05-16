@@ -10,7 +10,8 @@ renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.setSize(window.innerWidth, window.innerHeight);
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color('#1a1a2e');
+scene.background = new THREE.Color('#7ec8e3');
+scene.fog = new THREE.Fog('#7ec8e3', 15, 40);
 
 const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.5, 50);
 camera.position.set(6, 8, 9);
@@ -34,10 +35,44 @@ scene.add(sun);
 // ── Arena Ground ────────────────────────────────
 const ARENA_HALF = 5;
 
-// Ground plane
+// Procedural dirt texture
+function makeGroundTex() {
+  const c = document.createElement('canvas');
+  c.width = c.height = 256;
+  const ctx = c.getContext('2d');
+  // Base earth tone
+  ctx.fillStyle = '#8B7355';
+  ctx.fillRect(0, 0, 256, 256);
+  // Random speckles for dirt texture
+  const img = ctx.getImageData(0, 0, 256, 256);
+  for (let i = 0; i < img.data.length; i += 4) {
+    const n = (Math.random() - 0.5) * 40;
+    img.data[i] += n;     // R
+    img.data[i + 1] += n; // G
+    img.data[i + 2] += n; // B
+  }
+  ctx.putImageData(img, 0, 0);
+  // Add some subtle patches
+  for (let i = 0; i < 60; i++) {
+    const x = Math.random() * 256;
+    const y = Math.random() * 256;
+    const r = 5 + Math.random() * 25;
+    const shade = 90 + Math.random() * 60;
+    ctx.fillStyle = `rgba(${shade},${shade * 0.65},${shade * 0.35},0.25)`;
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  return new THREE.CanvasTexture(c);
+}
+
+const groundTex = makeGroundTex();
+groundTex.wrapS = groundTex.wrapT = THREE.RepeatWrapping;
+groundTex.repeat.set(4, 4);
+
 const ground = new THREE.Mesh(
   new THREE.PlaneGeometry(ARENA_HALF * 2 + 2, ARENA_HALF * 2 + 2),
-  new THREE.MeshStandardMaterial({ color: '#3a3020', roughness: 0.85 })
+  new THREE.MeshStandardMaterial({ map: groundTex, roughness: 0.9, color: '#cccccc' })
 );
 ground.rotation.x = -Math.PI / 2;
 ground.position.y = 0;
@@ -219,11 +254,15 @@ function updateCreatures(dt) {
     // 6. Energy decay
     c.energy -= dt * 0.04;
 
-    // 7. Visual update — size and glow based on energy
+    // 7. Visual update — size and color based on energy
     const energyScale = 0.7 + c.energy * 0.4;
     const flashBoost = c.eatFlash > 0 ? 1 + c.eatFlash * 0.5 : 1;
     c.mesh.scale.setScalar(energyScale * flashBoost);
-    c.mesh.material.emissiveIntensity = 0.1 + c.energy * 0.4;
+
+    // Color: green (full) → yellow → red (empty)
+    const t = Math.max(0, Math.min(1, c.energy / 1.5));
+    c.mesh.material.color.setRGB(1 - t, t, 0);
+    c.mesh.material.emissive.setRGB((1 - t) * 0.3, t * 0.25, 0);
 
     // 8. Death
     if (c.energy <= 0) {
@@ -333,11 +372,8 @@ window.addEventListener('resize', () => {
 const clock = new THREE.Clock();
 
 function updateHUD() {
-  const energyStr = creatures.length > 0
-    ? `Energy: ${creatures[0].energy.toFixed(2)}`
-    : 'Energy: --';
   document.getElementById('info').textContent =
-    `Creatures: ${creatures.length} | ${energyStr} | Time: ${Math.floor(elapsedSeconds)}s`;
+    `Creatures: ${creatures.length} | Time: ${Math.floor(elapsedSeconds)}s`;
 }
 
 function animate() {
