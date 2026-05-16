@@ -98,6 +98,52 @@ canvas {
   box-shadow: 0 0 8px rgba(68, 136, 204, 0.3);
 }
 
+/* ── Speed Popup ─────────────────────────────── */
+#speed-wrap {
+  position: relative;
+}
+
+#speed-popup {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 4px;
+  background: rgba(10, 20, 30, 0.95);
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 8px;
+  padding: 6px;
+  backdrop-filter: blur(12px);
+}
+
+#speed-popup.hidden {
+  display: none;
+}
+
+.speed-opt {
+  padding: 6px 14px;
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 5px;
+  background: transparent;
+  color: #aaa;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.12s;
+}
+
+.speed-opt:hover {
+  border-color: rgba(255,255,255,0.4);
+  color: #fff;
+}
+
+.speed-opt.active {
+  border-color: #ffaa44;
+  color: #ffaa44;
+  box-shadow: 0 0 6px rgba(255, 170, 68, 0.3);
+}
+
 #status-panel {
   position: fixed;
   top: 60px;

@@ -632,11 +632,34 @@ document.getElementById('add-creature-btn').addEventListener('click', () => {
   spawnCreature(p);
 });
 
-// Speed cycle
-document.getElementById('speed-btn').addEventListener('click', () => {
-  speedIdx = (speedIdx + 1) % SPEED_OPTIONS.length;
-  speedMultiplier = SPEED_OPTIONS[speedIdx];
-  document.getElementById('speed-btn').textContent = `Speed x${speedMultiplier}`;
+// Speed popup
+const speedBtn = document.getElementById('speed-btn');
+const speedPopup = document.getElementById('speed-popup');
+
+function setSpeed(idx) {
+  speedIdx = idx;
+  speedMultiplier = SPEED_OPTIONS[idx];
+  speedBtn.textContent = `Speed x${speedMultiplier}`;
+  speedPopup.querySelectorAll('.speed-opt').forEach((b, i) => {
+    b.classList.toggle('active', i === idx);
+  });
+  speedPopup.classList.add('hidden');
+}
+
+speedBtn.addEventListener('click', (e) => {
+  e.stopPropagation();
+  speedPopup.classList.toggle('hidden');
+});
+
+speedPopup.querySelectorAll('.speed-opt').forEach(btn => {
+  btn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    setSpeed(parseInt(btn.dataset.idx));
+  });
+});
+
+document.addEventListener('click', () => {
+  speedPopup.classList.add('hidden');
 });
 
 // Pause toggle
@@ -653,14 +676,12 @@ document.getElementById('reset-btn').addEventListener('click', () => {
   nutrients.length = 0;
   spawnCreature(new THREE.Vector3(0, 0.15, 0));
   paused = false;
-  speedIdx = 1;
-  speedMultiplier = 1;
+  setSpeed(1);
   elapsedSeconds = 0;
   gameHours = 7;
   dayCount = 1;
   updateTimeOfDay();
   document.getElementById('pause-btn').textContent = 'Pause';
-  document.getElementById('speed-btn').textContent = 'Speed x1';
 });
 
 // ── Resize ─────────────────────────────────────
