@@ -611,14 +611,22 @@ function updateCreatures(dt) {
     let scale = growthSize * energyScale * flashBoost;
     if (c.state === 'resting') scale *= 0.95 + Math.sin(c.phase * 3) * 0.05;
     if (c.state === 'torpor') scale *= 0.6;
+    if (c.state === 'frantic') scale *= 1.1 + Math.sin(c.phase * 8) * 0.08;
     c.mesh.scale.setScalar(scale);
 
     const radius = 0.2 * scale;
     if (c.pos.y < radius) c.pos.y = radius;
 
     const t = Math.max(0, Math.min(1, c.energy / 1.5));
-    c.mesh.material.color.setRGB(1 - t, t * 0.85, 0);
-    c.mesh.material.emissive.setRGB((1 - t) * 0.3, t * 0.22, 0);
+    if (c.state === 'frantic') {
+      c.mesh.material.color.setRGB(1, 0.2 + t * 0.3, 0);
+      c.mesh.material.emissive.setRGB(0.5, 0.05, 0);
+      c.mesh.material.emissiveIntensity = 0.6 + Math.sin(c.phase * 8) * 0.3;
+    } else {
+      c.mesh.material.color.setRGB(1 - t, t * 0.85, 0);
+      c.mesh.material.emissive.setRGB((1 - t) * 0.3, t * 0.22, 0);
+      c.mesh.material.emissiveIntensity = 0.3;
+    }
     c.mesh.material.opacity = c.state === 'torpor' ? 0.4 : 1;
     c.mesh.material.transparent = c.state === 'torpor';
 
