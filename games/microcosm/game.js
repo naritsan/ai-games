@@ -297,14 +297,6 @@ function spawnCreature(pos) {
   mesh.castShadow = true;
   scene.add(mesh);
 
-  // Perception ring
-  const ringGeo = new THREE.TorusGeometry(1, 0.02, 4, 24);
-  const ringMat = new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.15, depthWrite: false });
-  const perceptionRing = new THREE.Mesh(ringGeo, ringMat);
-  perceptionRing.rotation.x = -Math.PI / 2;
-  perceptionRing.position.y = 0.03;
-  mesh.add(perceptionRing);
-
   const baseSpeed = 0.5 + Math.random() * 0.7;
   creatures.push({
     pos: pos.clone(),
@@ -320,7 +312,6 @@ function spawnCreature(pos) {
     baseSpeed,
     satietyDecay: 0.08 + Math.random() * 0.04, // ~2 game hours to deplete
     detectRange: 0.3 + Math.random() * 0.3,
-    perceptionRing,
     reactionTime: 0.2 + Math.random() * 1.3,
     aggression: Math.random(), // 0=docile, 1=fierce
     // Growth & lifespan
@@ -333,7 +324,6 @@ function spawnCreature(pos) {
     satisfiedTimer: 0,
     wanderTarget: null,
   });
-  perceptionRing.scale.setScalar(creatures[creatures.length - 1].detectRange);
 }
 
 function updateCreatures(dt) {
@@ -440,13 +430,22 @@ function updateCreatures(dt) {
       c.state = 'torpor';
     }
 
-    // Check nearby food (unclaimed only)
-    let nearestDist = c.detectRange;
+    // Check nearby food with direction-aware perception
+    let nearestScore = Infinity;
     let nearestNutrient = null;
+    const forwardRange = c.detectRange * 1.6;
+    const rearRange = c.detectRange * 0.5;
     for (const n of nutrients) {
-      const dist = c.pos.distanceTo(n.pos);
-      if (dist < nearestDist) {
-        nearestDist = dist;
+      const dx = n.pos.x - c.pos.x;
+      const dz = n.pos.z - c.pos.z;
+      const dist = Math.sqrt(dx * dx + dz * dz);
+      // Angle between heading and direction to food
+      const angleToFood = Math.abs(Math.atan2(dz, dx) - c.heading);
+      const angleDiff = Math.min(angleToFood, Math.PI * 2 - angleToFood);
+      // Effective range: forward=long, rear=short
+      const effectiveRange = forwardRange - (forwardRange - rearRange) * (angleDiff / Math.PI);
+      if (dist < effectiveRange && dist < nearestScore) {
+        nearestScore = dist;
         nearestNutrient = n;
       }
     }
@@ -649,9 +648,6 @@ function updateCreatures(dt) {
     }
     c.mesh.material.opacity = c.state === 'torpor' ? 0.4 : 1;
     c.mesh.material.transparent = c.state === 'torpor';
-
-    // Perception ring — brighter when seeking/frantic
-    c.perceptionRing.material.opacity = (c.state === 'seeking' || c.state === 'frantic') ? 0.4 : 0.12;
 
     // Death
     if (c.energy <= 0) {
