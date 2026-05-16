@@ -307,7 +307,7 @@ function spawnCreature(pos) {
     foodNoticeAt: 0,
     // Individual traits
     baseSpeed,
-    metabolism: 0.03 + Math.random() * 0.025,
+    metabolism: 0.015 + Math.random() * 0.015,
     detectRange: 2.5 + Math.random() * 1.5,
     reactionTime: 0.2 + Math.random() * 1.3,
     // Growth & lifespan
