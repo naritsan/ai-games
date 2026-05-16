@@ -319,7 +319,6 @@ function spawnCreature(pos) {
   fanGeo.computeVertexNormals();
   const fanMat = new THREE.MeshBasicMaterial({ color: '#aaccff', transparent: true, opacity: 0.12, depthWrite: false, side: THREE.DoubleSide });
   const fanMesh = new THREE.Mesh(fanGeo, fanMat);
-  fanMesh.rotation.x = -Math.PI / 2;
   fanMesh.position.copy(pos);
   fanMesh.position.y = 0.03;
   scene.add(fanMesh);
