@@ -620,18 +620,22 @@ function updateCreatures(dt) {
           // Push victim harder
           other.pos.x += (other.pos.x - c.pos.x) / d * 0.3;
           other.pos.z += (other.pos.z - c.pos.z) / d * 0.3;
-          // If victim dies, spawn food and feed attacker
+          // If victim dies, spawn food based on remaining energy
           if (other.energy <= 0) {
-            for (let k = 0; k < 3; k++) {
+            const corpseEnergy = Math.max(0.1, other.energy + 0.12); // energy before the killing blow
+            const nutrientCount = Math.max(1, Math.floor(corpseEnergy * 8)); // ~1-10 nutrients
+            for (let k = 0; k < nutrientCount; k++) {
+              const size = corpseEnergy > 0.8 ? 'l' : corpseEnergy > 0.4 ? 'm' : 's';
               const p = new THREE.Vector3(
-                other.pos.x + (Math.random() - 0.5) * 0.3,
+                other.pos.x + (Math.random() - 0.5) * 0.5,
                 1.5 + Math.random() * 0.5,
-                other.pos.z + (Math.random() - 0.5) * 0.3
+                other.pos.z + (Math.random() - 0.5) * 0.5
               );
-              spawnNutrient(p, Math.random() < 0.5 ? 'm' : 'l');
+              spawnNutrient(p, size);
             }
-            c.energy = Math.min(1.5, c.energy + 0.3);
-            c.satiety = Math.min(1.0, c.satiety + 0.6);
+            const feedEnergy = Math.min(0.5, corpseEnergy * 0.6);
+            c.energy = Math.min(1.5, c.energy + feedEnergy);
+            c.satiety = Math.min(1.0, c.satiety + feedEnergy);
             c.satisfiedTimer = 2;
             c.state = 'exploring';
           }
