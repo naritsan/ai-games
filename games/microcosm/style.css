@@ -44,18 +44,22 @@ canvas {
 }
 
 #title {
-  font-size: 20px;
+  font-size: 24px;
   font-weight: 700;
-  letter-spacing: 0.05em;
-  color: #b8d8e8;
-  text-shadow: 0 0 12px rgba(40, 180, 255, 0.3);
+  letter-spacing: 0.06em;
+  color: #d0e8f8;
+  text-shadow: 0 0 16px rgba(40, 180, 255, 0.5);
 }
 
 #info {
-  font-size: 13px;
-  color: #888;
+  font-size: 15px;
+  color: #ccc;
   text-align: right;
-  line-height: 1.4;
+  line-height: 1.5;
+  text-shadow: 0 0 6px rgba(0, 0, 0, 0.8);
+  background: rgba(10, 20, 30, 0.6);
+  padding: 4px 10px;
+  border-radius: 6px;
 }
 
 #palette {
@@ -155,23 +159,24 @@ canvas {
   top: 60px;
   right: 16px;
   pointer-events: auto;
-  background: rgba(10, 20, 30, 0.85);
+  background: rgba(10, 20, 30, 0.9);
   backdrop-filter: blur(8px);
-  border: 1px solid rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.2);
   border-radius: 8px;
   padding: 12px 16px;
-  min-width: 180px;
+  min-width: 200px;
   max-height: 60vh;
   overflow-y: auto;
-  font-size: 12px;
+  font-size: 13px;
   z-index: 20;
 }
 
 #status-title {
   font-weight: 700;
-  color: #b8d8e8;
+  color: #d0e8f8;
   margin-bottom: 8px;
-  font-size: 13px;
+  font-size: 14px;
+  text-shadow: 0 0 6px rgba(40, 180, 255, 0.3);
 }
 
 .creature-row {
@@ -194,8 +199,9 @@ canvas {
 }
 
 .creature-stats {
-  color: #aaa;
-  line-height: 1.4;
+  color: #ccc;
+  line-height: 1.5;
+  font-weight: 500;
 }
 
 /* ── Details Overlay ─────────────────────────── */

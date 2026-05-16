@@ -854,10 +854,10 @@ function animate() {
   if (!paused) {
     updateNutrients(dt);
     updateCreatures(dt);
-    elapsedSeconds += dt / speedMultiplier;
+    elapsedSeconds += dt;
     // Advance game time
     const prevHours = gameHours;
-    gameHours += (dt / speedMultiplier) / SECONDS_PER_DAY * 24;
+    gameHours += dt / SECONDS_PER_DAY * 24;
     if (gameHours >= 24) {
       gameHours -= 24;
       dayCount++;
