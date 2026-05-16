@@ -618,13 +618,11 @@ function updateCreatures(dt) {
     if (c.pos.y < radius) c.pos.y = radius;
 
     const t = Math.max(0, Math.min(1, c.energy / 1.5));
+    c.mesh.material.color.setRGB(1 - t, t * 0.85, 0);
+    c.mesh.material.emissive.setRGB((1 - t) * 0.3, t * 0.22, 0);
     if (c.state === 'frantic') {
-      c.mesh.material.color.setRGB(1, 0.2 + t * 0.3, 0);
-      c.mesh.material.emissive.setRGB(0.5, 0.05, 0);
-      c.mesh.material.emissiveIntensity = 0.6 + Math.sin(c.phase * 8) * 0.3;
+      c.mesh.material.emissiveIntensity = 0.5 + Math.sin(c.phase * 8) * 0.3;
     } else {
-      c.mesh.material.color.setRGB(1 - t, t * 0.85, 0);
-      c.mesh.material.emissive.setRGB((1 - t) * 0.3, t * 0.22, 0);
       c.mesh.material.emissiveIntensity = 0.3;
     }
     c.mesh.material.opacity = c.state === 'torpor' ? 0.4 : 1;
