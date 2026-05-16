@@ -554,25 +554,31 @@ function updateCreatures(dt) {
         targetAngle = angleToward(c.pos, c.wanderTarget);
         break;
 
-      case 'frantic':
-        // Charge mostly straight, occasional swerves, rarely random direction
-        speed = c.baseSpeed * 3.0 * speedMod;
-        if (!c.wanderTarget || c.pos.distanceTo(c.wanderTarget) < 0.4 || Math.random() < 0.02) {
-          let angle;
-          if (Math.random() < 0.15) {
-            // Complete random direction change
-            angle = Math.random() * Math.PI * 2;
-          } else {
-            // Swerve within forward cone
-            angle = c.heading + (Math.random() - 0.5) * 1.2;
+      case 'frantic': {
+        // If prey detected, chase it; otherwise charge straight with swerves
+        const target = nearestPrey || (nearestNutrient ? nearestNutrient : null);
+        if (target) {
+          speed = c.baseSpeed * 3.5 * speedMod;
+          targetAngle = angleToward(c.pos, target.pos);
+          // Attack on contact is handled in collision section
+        } else {
+          speed = c.baseSpeed * 3.0 * speedMod;
+          if (!c.wanderTarget || c.pos.distanceTo(c.wanderTarget) < 0.4 || Math.random() < 0.02) {
+            let angle;
+            if (Math.random() < 0.15) {
+              angle = Math.random() * Math.PI * 2;
+            } else {
+              angle = c.heading + (Math.random() - 0.5) * 1.2;
+            }
+            c.wanderTarget = new THREE.Vector3(
+              c.pos.x + Math.cos(angle) * 5, 0.15,
+              c.pos.z + Math.sin(angle) * 5
+            );
           }
-          c.wanderTarget = new THREE.Vector3(
-            c.pos.x + Math.cos(angle) * 5, 0.15,
-            c.pos.z + Math.sin(angle) * 5
-          );
+          targetAngle = angleToward(c.pos, c.wanderTarget);
         }
-        targetAngle = angleToward(c.pos, c.wanderTarget);
         break;
+      }
 
       case 'exploring':
       default: {
@@ -613,16 +619,16 @@ function updateCreatures(dt) {
         c.heading += (Math.random() - 0.5) * (c.state === 'frantic' ? 1.5 : 0.5);
 
         // Frantic creatures attack others on contact
-        if (c.state === 'frantic' && !c.attackCooldown) {
-          other.energy -= 0.12;
-          other.satiety = Math.max(0, other.satiety - 0.1);
-          c.attackCooldown = 0.5;
+        if (c.state === 'frantic' && c.attackCooldown <= 0) {
+          other.energy -= 0.2;
+          other.satiety = Math.max(0, other.satiety - 0.15);
+          c.attackCooldown = 0.3;
           // Push victim harder
           other.pos.x += (other.pos.x - c.pos.x) / d * 0.3;
           other.pos.z += (other.pos.z - c.pos.z) / d * 0.3;
           // If victim dies, spawn food based on remaining energy
           if (other.energy <= 0) {
-            const corpseEnergy = Math.max(0.1, other.energy + 0.12); // energy before the killing blow
+            const corpseEnergy = Math.max(0.1, other.energy + 0.2); // energy before the killing blow
             const nutrientCount = Math.max(1, Math.floor(corpseEnergy * 8)); // ~1-10 nutrients
             for (let k = 0; k < nutrientCount; k++) {
               const size = corpseEnergy > 0.8 ? 'l' : corpseEnergy > 0.4 ? 'm' : 's';
