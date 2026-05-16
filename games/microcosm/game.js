@@ -201,6 +201,9 @@ function spawnNutrient(pos, size) {
     eatTime: def.eatTime,
     energy: def.energy,
     satiety: def.satiety,
+    maxEnergy: def.energy,
+    maxSatiety: def.satiety,
+    originalScale: mesh.scale.clone(),
   });
 }
 
@@ -312,6 +315,7 @@ function spawnCreature(pos) {
     satietyDecay: 0.008 + Math.random() * 0.006,
     detectRange: 2.5 + Math.random() * 1.5,
     reactionTime: 0.2 + Math.random() * 1.3,
+    aggression: Math.random(), // 0=docile, 1=fierce
     // Growth & lifespan
     growth: 0.2 + Math.random() * 0.15,
     maxAge: 80 + Math.random() * 80,
@@ -347,24 +351,32 @@ function updateCreatures(dt) {
     // ── Eating state ────────────────────────────────
     if (c.state === 'eating') {
       const n = c.eatingTarget;
-      // Check if food still valid
-      if (!n || n.claimedBy !== c || !nutrients.includes(n)) {
+      if (!n || !nutrients.includes(n)) {
+        // Food gone
         c.eatingTarget = null;
         c.eatingProgress = 0;
         c.state = 'exploring';
         c.stateTimer = 1 + Math.random() * 2;
       } else {
-        // Progress eating
+        // Progress eating — gradual consumption
         c.eatingProgress += dt / n.eatTime;
-        // Pulse while eating (preserve normal scale)
+        // Shrink food as it's eaten
+        const remain = 1 - c.eatingProgress;
+        n.mesh.scale.copy(n.originalScale).multiplyScalar(Math.max(0.05, remain));
+        // Award partial energy incrementally
+        const prevProgress = c.eatingProgress - dt / n.eatTime;
+        if (Math.floor(c.eatingProgress * 4) > Math.floor(prevProgress * 4)) {
+          // Small energy tick every 25% of eating
+          c.energy = Math.min(1.5, c.energy + n.maxEnergy * 0.25);
+          c.satiety = Math.min(1.0, c.satiety + n.maxSatiety * 0.25);
+        }
+        // Pulse while eating
         const gs = 0.5 + c.growth * 0.7;
         const es = 0.7 + c.energy * 0.4;
         const pulse = 1 + Math.sin(c.phase * 6) * 0.06;
         c.mesh.scale.setScalar(gs * es * pulse);
         if (c.eatingProgress >= 1) {
-          // Finished eating
-          c.energy = Math.min(1.5, c.energy + n.energy);
-          c.satiety = Math.min(1.0, c.satiety + n.satiety);
+          // Fully consumed
           c.eatFlash = 0.5;
           c.wanderTarget = null;
           c.foodNoticeAt = 0;
@@ -377,7 +389,6 @@ function updateCreatures(dt) {
           c.stateTimer = 2 + Math.random() * 3;
         }
       }
-      // Stay in place while eating (age/phase already advanced above)
       c.phase += dt * 3;
       c.satiety -= dt * c.satietyDecay;
       if (c.satiety < 0.2) c.energy -= dt * 0.06;
@@ -517,18 +528,49 @@ function updateCreatures(dt) {
       c.pos.z += (Math.sin(c.heading) * speed + jitterZ) * dt;
     }
 
-    // Collision avoidance
+    // Collision + aggression
     for (let j = 0; j < creatures.length; j++) {
       if (i === j) continue;
       const other = creatures[j];
       const d = c.pos.distanceTo(other.pos);
       const minDist = 0.5;
       if (d < minDist && d > 0.001) {
-        const pushX = (c.pos.x - other.pos.x) / d * (minDist - d) * 1.5;
-        const pushZ = (c.pos.z - other.pos.z) / d * (minDist - d) * 1.5;
-        c.pos.x += pushX * dt;
-        c.pos.z += pushZ * dt;
+        // Aggressive push: stronger from hungrier or more aggressive creatures
+        const myForce = 1 + c.aggression * 2 + (1 - c.satiety) * 2;
+        const theirForce = 1 + other.aggression * 2 + (1 - other.satiety) * 2;
+        const ratio = myForce / (myForce + theirForce);
+        const pushMag = (minDist - d) * 3;
+        c.pos.x += (c.pos.x - other.pos.x) / d * pushMag * (1 - ratio) * dt;
+        c.pos.z += (c.pos.z - other.pos.z) / d * pushMag * (1 - ratio) * dt;
         c.heading += (Math.random() - 0.5) * 0.5;
+        // Interrupt eating on strong collision
+        if (pushMag * (1 - ratio) * dt > 0.05) {
+          if (c.state === 'eating' && c.eatingTarget) {
+            c.eatingTarget.claimedBy = null;
+            c.eatingTarget = null;
+            c.eatingProgress = 0;
+            c.state = 'exploring';
+            c.stateTimer = 1;
+          }
+        }
+        // Steal food: aggressive/hungry creatures claim interrupted food
+        if (other.state === 'eating' && other.eatingTarget && c.state === 'seeking' && c.aggression > 0.5 && d < 0.6) {
+          const targetFood = other.eatingTarget;
+          const distToFood = c.pos.distanceTo(targetFood.pos);
+          if (distToFood < 0.5) {
+            other.eatingTarget.claimedBy = null;
+            other.eatingTarget = null;
+            other.eatingProgress = 0;
+            other.state = 'exploring';
+            other.stateTimer = 1;
+            targetFood.claimedBy = c;
+            c.eatingTarget = targetFood;
+            c.eatingProgress = 0;
+            c.state = 'eating';
+            c.foodNoticeAt = 0;
+            continue;
+          }
+        }
       }
     }
 
