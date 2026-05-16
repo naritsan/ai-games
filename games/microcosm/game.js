@@ -312,6 +312,8 @@ function spawnCreature(pos) {
     heading: Math.random() * Math.PI * 2,
     energy: 1.0,
     satiety: 0.6 + Math.random() * 0.4,
+    hp: 1.0,
+    lastHitTime: -99,
     age: 0,
     phase: Math.random() * Math.PI * 2,
     mesh,
@@ -620,16 +622,15 @@ function updateCreatures(dt) {
 
         // Frantic creatures attack others on contact
         if (c.state === 'frantic' && c.attackCooldown <= 0) {
-          other.energy -= 0.2;
-          other.satiety = Math.max(0, other.satiety - 0.15);
+          other.hp -= 0.25;
+          other.lastHitTime = other.age;
           c.attackCooldown = 0.3;
           // Push victim harder
           other.pos.x += (other.pos.x - c.pos.x) / d * 0.3;
           other.pos.z += (other.pos.z - c.pos.z) / d * 0.3;
           // If victim dies, spawn food based on remaining energy
-          if (other.energy <= 0) {
-            const preDmg = other.energy + 0.2;
-            const corpseEnergy = Math.max(0.1, preDmg);
+          if (other.hp <= 0) {
+            const corpseEnergy = Math.max(0.2, other.energy);
             const nutrientCount = Math.max(1, Math.floor(corpseEnergy * 8)); // ~1-10 nutrients
             for (let k = 0; k < nutrientCount; k++) {
               const size = corpseEnergy > 0.8 ? 'l' : corpseEnergy > 0.4 ? 'm' : 's';
@@ -715,8 +716,13 @@ function updateCreatures(dt) {
     c.ringMesh.material.color.set(c.foodInRange ? '#ffaa44' : '#556688');
     c.ringMesh.material.opacity = c.foodInRange ? 0.45 : 0.15;
 
+    // HP regen (when not recently hit)
+    if (c.age - c.lastHitTime > 2) {
+      c.hp = Math.min(1.0, c.hp + dt * 0.15);
+    }
+
     // Death
-    if (c.energy <= 0) {
+    if (c.energy <= 0 || c.hp <= 0) {
       scene.remove(c.mesh);
       scene.remove(c.ringMesh);
       creatures.splice(i, 1);
@@ -789,24 +795,26 @@ function refreshDetails() {
     const t = Math.max(0, Math.min(1, c.energy / 1.5));
     const r = Math.floor((1 - t) * 255);
     const g = Math.floor(t * 200);
-    const pct = (c.energy * 100).toFixed(0);
+    const pct = (c.hp * 100).toFixed(0);
+    const nrgPct = (c.energy * 100).toFixed(0);
     const satPct = (c.satiety * 100).toFixed(0);
     const ageStr = c.age > c.maxAge ? 'Dying' : c.age > c.maxAge * 0.8 ? 'Elderly' : c.growth < 1 ? 'Growing' : 'Adult';
     const stateLabel = c.state === 'torpor' ? 'Torpor' : c.state === 'frantic' ? 'Frantic' : c.state === 'lethargic' ? 'Lethargic' : c.satiety <= 0 ? 'Hungry' : c.state.charAt(0).toUpperCase() + c.state.slice(1);
     html += `<div class="detail-card">
       <div class="detail-header">
-        <div class="creature-dot" style="background:rgb(${r},${g},0);box-shadow:0 0 8px rgb(${r},${g},0)"></div>
+        <div class="creature-dot" style="background:rgb(${hpR},${hpG},0);box-shadow:0 0 8px rgb(${hpR},${hpG},0)"></div>
         <div class="detail-name">Creature #${i + 1}</div>
       </div>
       <div class="detail-grid">
-        <div>Vitality <span>${pct}%</span></div>
+        <div>HP <span>${pct}%</span></div>
+        <div>Energy <span>${nrgPct}%</span></div>
         <div>Satiety <span>${satPct}%</span></div>
         <div>Age <span>${Math.floor(c.age)}s / ${Math.floor(c.maxAge)}s</span></div>
         <div>Growth <span>${(c.growth * 100).toFixed(0)}%</span></div>
         <div>Stage <span>${ageStr}</span></div>
         <div>State <span>${stateLabel}</span></div>
         <div>Position <span>${c.pos.x.toFixed(1)}, ${c.pos.z.toFixed(1)}</span></div>
-        <div class="detail-bar-bg"><div class="detail-bar-fill" style="width:${pct}%;background:rgb(${r},${g},0)"></div></div>
+        <div class="detail-bar-bg"><div class="detail-bar-fill" style="width:${pct}%;background:rgb(${hpR},${hpG},0)"></div></div>
       </div>
     </div>`;
   }
@@ -1006,17 +1014,19 @@ function updateStatusPanel() {
     const t = Math.max(0, Math.min(1, c.energy / 1.5));
     const r = Math.floor((1 - t) * 255);
     const g = Math.floor(t * 200);
-    const dotColor = `rgb(${r},${g},0)`;
+    const hpR = Math.floor((1 - c.hp) * 255);
+    const hpG = Math.floor(c.hp * 200);
+    const dotColor = `rgb(${hpR},${hpG},0)`;
     const stateLabel = c.state === 'torpor' ? 'TOR' : c.state === 'frantic' ? 'FRN' : c.state === 'lethargic' ? 'LET' : c.state === 'eating' ? 'EAT' : c.state === 'resting' ? 'RST' : '';
-    const vitPct = Math.floor((c.energy / 1.5) * 100);
+    const hpPct = Math.floor(c.hp * 100);
     const satPct = Math.floor(c.satiety * 100);
-    const vitColor = `rgb(${Math.floor((1 - c.energy/1.5) * 255)},${Math.floor((c.energy/1.5) * 200)},0)`;
+    const hpColor = `rgb(${Math.floor((1 - c.hp) * 255)},${Math.floor(c.hp * 200)},0)`;
     const satColor = c.satiety > 0.3 ? '#88bb44' : c.satiety > 0 ? '#ddaa33' : '#dd4433';
     html += `<div class="creature-row">
       <div class="creature-dot" style="background:${dotColor};box-shadow:0 0 6px ${dotColor}"></div>
       <div class="creature-stats">
         <div class="stat-line">#${i + 1} <span class="stat-label">${stateLabel}</span></div>
-        <div class="gauge-row"><span class="gauge-label">VIT</span><div class="gauge-bg"><div class="gauge-fill" style="width:${vitPct}%;background:${vitColor}"></div></div><span class="gauge-pct">${vitPct}%</span></div>
+        <div class="gauge-row"><span class="gauge-label">HP</span><div class="gauge-bg"><div class="gauge-fill" style="width:${hpPct}%;background:${hpColor}"></div></div><span class="gauge-pct">${hpPct}%</span></div>
         <div class="gauge-row"><span class="gauge-label">SAT</span><div class="gauge-bg"><div class="gauge-fill" style="width:${satPct}%;background:${satColor}"></div></div><span class="gauge-pct">${satPct}%</span></div>
       </div>
     </div>`;
