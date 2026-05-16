@@ -91,13 +91,13 @@ scene.add(stars);
 // ── Time-of-Day Presets ─────────────────────────
 const TIME_KEYFRAMES = [
   { h: 0,  bg: '#0f0f24', fog: '#0f0f24', amb: '#334466', ambI: 0.22, sun: '#334466', sunI: 0.0, moonI: 1.2 },
-  { h: 5,  bg: '#1a1530', fog: '#1a1530', amb: '#445577', ambI: 0.25, sun: '#886644', sunI: 0.1, moonI: 0.8 },
-  { h: 6,  bg: '#d49060', fog: '#c8a090', amb: '#886655', ambI: 0.35, sun: '#ffaa66', sunI: 0.6, moonI: 0.0 },
-  { h: 8,  bg: '#a0d8f0', fog: '#a0c8e0', amb: '#ffffff', ambI: 0.45, sun: '#ffffdd', sunI: 1.0, moonI: 0.0 },
+  { h: 5,  bg: '#2a2040', fog: '#2a2040', amb: '#556688', ambI: 0.3,  sun: '#996644', sunI: 0.2, moonI: 0.6 },
+  { h: 6,  bg: '#d49060', fog: '#c8a090', amb: '#aa8866', ambI: 0.45, sun: '#ffbb77', sunI: 0.8, moonI: 0.0 },
+  { h: 8,  bg: '#a0d8f0', fog: '#a0c8e0', amb: '#ffffff', ambI: 0.5,  sun: '#ffffdd', sunI: 1.1, moonI: 0.0 },
   { h: 12, bg: '#7ec8e3', fog: '#a0c8e0', amb: '#ffffff', ambI: 0.5,  sun: '#ffffff', sunI: 1.2, moonI: 0.0 },
   { h: 16, bg: '#a0d0e8', fog: '#a0c0d8', amb: '#ffffff', ambI: 0.45, sun: '#ffeedd', sunI: 1.0, moonI: 0.0 },
-  { h: 18, bg: '#e88850', fog: '#d09080', amb: '#996655', ambI: 0.35, sun: '#ff8844', sunI: 0.6, moonI: 0.0 },
-  { h: 20, bg: '#1a1030', fog: '#1a1030', amb: '#334466', ambI: 0.25, sun: '#443355', sunI: 0.05, moonI: 0.7 },
+  { h: 18, bg: '#e88850', fog: '#d09080', amb: '#aa8866', ambI: 0.45, sun: '#ff8844', sunI: 0.8, moonI: 0.0 },
+  { h: 20, bg: '#1a1030', fog: '#1a1030', amb: '#445577', ambI: 0.3,  sun: '#443355', sunI: 0.08, moonI: 0.7 },
   { h: 24, bg: '#0f0f24', fog: '#0f0f24', amb: '#334466', ambI: 0.22, sun: '#334466', sunI: 0.0, moonI: 1.2 },
 ];
 
