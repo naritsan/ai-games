@@ -605,7 +605,9 @@ document.getElementById('click-mode-btn').addEventListener('click', () => {
 
 // ── UI State ───────────────────────────────────
 let paused = false;
-let speedMultiplier = 1;
+const SPEED_OPTIONS = [0.5, 1, 2, 5, 10];
+let speedIdx = 1; // default: ×1
+let speedMultiplier = SPEED_OPTIONS[speedIdx];
 let elapsedSeconds = 0;
 
 // Sprinkle
@@ -630,9 +632,10 @@ document.getElementById('add-creature-btn').addEventListener('click', () => {
   spawnCreature(p);
 });
 
-// Speed toggle
+// Speed cycle
 document.getElementById('speed-btn').addEventListener('click', () => {
-  speedMultiplier = speedMultiplier === 1 ? 2 : 1;
+  speedIdx = (speedIdx + 1) % SPEED_OPTIONS.length;
+  speedMultiplier = SPEED_OPTIONS[speedIdx];
   document.getElementById('speed-btn').textContent = `Speed x${speedMultiplier}`;
 });
 
@@ -650,6 +653,7 @@ document.getElementById('reset-btn').addEventListener('click', () => {
   nutrients.length = 0;
   spawnCreature(new THREE.Vector3(0, 0.15, 0));
   paused = false;
+  speedIdx = 1;
   speedMultiplier = 1;
   elapsedSeconds = 0;
   gameHours = 7;
