@@ -85,3 +85,63 @@ canvas {
   border-color: rgba(255,255,255,0.5);
   color: #fff;
 }
+
+.mode-feed {
+  border-color: #44cc44 !important;
+  color: #44cc44 !important;
+  box-shadow: 0 0 8px rgba(68, 204, 68, 0.3);
+}
+
+.mode-look {
+  border-color: #4488cc !important;
+  color: #4488cc !important;
+  box-shadow: 0 0 8px rgba(68, 136, 204, 0.3);
+}
+
+#status-panel {
+  position: fixed;
+  top: 60px;
+  right: 16px;
+  pointer-events: auto;
+  background: rgba(10, 20, 30, 0.85);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 8px;
+  padding: 12px 16px;
+  min-width: 180px;
+  max-height: 60vh;
+  overflow-y: auto;
+  font-size: 12px;
+  z-index: 20;
+}
+
+#status-title {
+  font-weight: 700;
+  color: #b8d8e8;
+  margin-bottom: 8px;
+  font-size: 13px;
+}
+
+.creature-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+
+.creature-row:last-child {
+  border-bottom: none;
+}
+
+.creature-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.creature-stats {
+  color: #aaa;
+  line-height: 1.4;
+}

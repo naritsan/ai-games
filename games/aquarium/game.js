@@ -269,8 +269,11 @@ const clickPlane = new THREE.Plane().setFromNormalAndCoplanarPoint(
 );
 const intersectPt = new THREE.Vector3();
 
+let clickMode = 'feed'; // 'feed' | 'look'
+
 renderer.domElement.addEventListener('click', (e) => {
-  if (e.target.closest('#palette')) return;
+  if (e.target.closest('#palette') || e.target.closest('#status-panel')) return;
+  if (clickMode !== 'feed') return;
 
   mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
   mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
@@ -291,6 +294,14 @@ renderer.domElement.addEventListener('click', (e) => {
       }
     }
   }
+});
+
+// Click mode toggle
+document.getElementById('click-mode-btn').addEventListener('click', () => {
+  clickMode = clickMode === 'feed' ? 'look' : 'feed';
+  const btn = document.getElementById('click-mode-btn');
+  btn.textContent = `Click: ${clickMode === 'feed' ? 'Feed' : 'Look'}`;
+  btn.className = `action-btn ${clickMode === 'feed' ? 'mode-feed' : 'mode-look'}`;
 });
 
 // ── UI State ───────────────────────────────────
@@ -359,6 +370,28 @@ const clock = new THREE.Clock();
 function updateHUD() {
   document.getElementById('info').textContent =
     `Creatures: ${creatures.length} | Time: ${Math.floor(elapsedSeconds)}s`;
+  updateStatusPanel();
+}
+
+function updateStatusPanel() {
+  const list = document.getElementById('status-list');
+  if (creatures.length === 0) {
+    list.innerHTML = '<div style="color:#666;padding:4px 0">No creatures alive</div>';
+    return;
+  }
+  let html = '';
+  for (let i = 0; i < creatures.length; i++) {
+    const c = creatures[i];
+    const t = Math.max(0, Math.min(1, c.energy / 1.5));
+    const r = Math.floor((1 - t) * 255);
+    const g = Math.floor(t * 200);
+    const dotColor = `rgb(${r},${g},0)`;
+    html += `<div class="creature-row">
+      <div class="creature-dot" style="background:${dotColor};box-shadow:0 0 6px ${dotColor}"></div>
+      <div class="creature-stats">#${i + 1} &nbsp;VIT ${(c.energy * 100).toFixed(0)}% &nbsp;| &nbsp;${Math.floor(c.age)}s</div>
+    </div>`;
+  }
+  list.innerHTML = html;
 }
 
 function animate() {
