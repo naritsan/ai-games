@@ -218,9 +218,8 @@ function updateCreatures(dt) {
     if (c.pos.x < -ARENA_HALF + margin) c.vel.x -= (c.pos.x - (-ARENA_HALF + margin)) * spring * dt;
     if (c.pos.z > ARENA_HALF - margin) c.vel.z -= (c.pos.z - (ARENA_HALF - margin)) * spring * dt;
     if (c.pos.z < -ARENA_HALF + margin) c.vel.z -= (c.pos.z - (-ARENA_HALF + margin)) * spring * dt;
-    // Vertical bounds — keep near ground, don't fly too high
+    // Vertical bounds — don't fly too high (ground floor handled by radius collision)
     if (c.pos.y > 2.0) c.vel.y -= (c.pos.y - 2.0) * spring * dt;
-    if (c.pos.y < 0.05) { c.pos.y = 0.05; c.vel.y = Math.max(0, c.vel.y); }
 
     // 6. Energy decay
     c.energy -= dt * 0.04;
@@ -228,7 +227,15 @@ function updateCreatures(dt) {
     // 7. Visual update — size and color based on energy
     const energyScale = 0.7 + c.energy * 0.4;
     const flashBoost = c.eatFlash > 0 ? 1 + c.eatFlash * 0.5 : 1;
-    c.mesh.scale.setScalar(energyScale * flashBoost);
+    const scale = energyScale * flashBoost;
+    c.mesh.scale.setScalar(scale);
+
+    // Ground collision — keep bottom of sphere above ground
+    const radius = 0.2 * scale;
+    if (c.pos.y < radius) {
+      c.pos.y = radius;
+      if (c.vel.y < 0) c.vel.y = 0;
+    }
 
     // Color: green (full) → yellow → red (empty)
     const t = Math.max(0, Math.min(1, c.energy / 1.5));
