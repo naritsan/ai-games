@@ -297,6 +297,14 @@ function spawnCreature(pos) {
   mesh.castShadow = true;
   scene.add(mesh);
 
+  // Perception ring on ground
+  const ringGeo = new THREE.TorusGeometry(1, 0.03, 4, 20);
+  const ringMat = new THREE.MeshBasicMaterial({ color: '#556688', transparent: true, opacity: 0.2, depthWrite: false });
+  const ringMesh = new THREE.Mesh(ringGeo, ringMat);
+  ringMesh.rotation.x = -Math.PI / 2;
+  ringMesh.position.y = 0.02;
+  mesh.add(ringMesh);
+
   const baseSpeed = 0.5 + Math.random() * 0.7;
   creatures.push({
     pos: pos.clone(),
@@ -312,6 +320,8 @@ function spawnCreature(pos) {
     baseSpeed,
     satietyDecay: 0.08 + Math.random() * 0.04, // ~2 game hours to deplete
     detectRange: 0.3 + Math.random() * 0.3,
+    foodInRange: false,
+    ringMesh,
     reactionTime: 0.2 + Math.random() * 1.3,
     aggression: Math.random(), // 0=docile, 1=fierce
     // Growth & lifespan
@@ -324,6 +334,7 @@ function spawnCreature(pos) {
     satisfiedTimer: 0,
     wanderTarget: null,
   });
+  ringMesh.scale.setScalar(creatures[creatures.length - 1].detectRange);
 }
 
 function updateCreatures(dt) {
@@ -433,8 +444,10 @@ function updateCreatures(dt) {
     // Check nearby food (simple circular range)
     let nearestDist = c.detectRange;
     let nearestNutrient = null;
+    c.foodInRange = false;
     for (const n of nutrients) {
       const dist = c.pos.distanceTo(n.pos);
+      if (dist < c.detectRange) c.foodInRange = true;
       if (dist < nearestDist) {
         nearestDist = dist;
         nearestNutrient = n;
@@ -639,6 +652,10 @@ function updateCreatures(dt) {
     }
     c.mesh.material.opacity = c.state === 'torpor' ? 0.4 : 1;
     c.mesh.material.transparent = c.state === 'torpor';
+
+    // Perception ring color
+    c.ringMesh.material.color.set(c.foodInRange ? '#ffaa44' : '#556688');
+    c.ringMesh.material.opacity = c.foodInRange ? 0.45 : 0.15;
 
     // Death
     if (c.energy <= 0) {
