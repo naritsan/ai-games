@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fire Garden</title>
+  <link rel="stylesheet" href="style.css">
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.157.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.157.0/examples/jsm/"
+    }
+  }
+  </script>
+</head>
+<body>
+  <canvas id="game"></canvas>
+
+  <div id="ui">
+    <div id="hud">
+      <span id="title">FIRE GARDEN</span>
+      <span id="info"></span>
+    </div>
+
+    <div id="palette">
+      <button class="mat-btn active" data-idx="0">Sawdust</button>
+      <button class="mat-btn" data-idx="1">Dry Grass</button>
+      <button class="mat-btn" data-idx="2">Leaves</button>
+      <button class="mat-btn" data-idx="3">Pine Needles</button>
+      <button class="mat-btn" data-idx="4">Twigs</button>
+      <button class="mat-btn" data-idx="5">Pine Wood</button>
+      <button class="mat-btn" data-idx="6">Oak Wood</button>
+      <button class="mat-btn" data-idx="7">Charcoal</button>
+      <button class="mat-btn" data-idx="8">Paper</button>
+      <button class="mat-btn" data-idx="9">Cardboard</button>
+      <button class="action-btn" id="ignite-btn">FIRE</button>
+      <button class="action-btn" id="reset-btn">RST</button>
+    </div>
+  </div>
+
+  <script type="module" src="game.js"></script>
+</body>
+</html>

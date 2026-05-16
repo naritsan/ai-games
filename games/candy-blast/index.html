@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>CANDY BLAST</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="app">
+    <header>
+      <h1 class="title">CANDY<span class="accent">BLAST</span></h1>
+      <div class="hud">
+        <div class="stat-box">
+          <div class="stat-label">SCORE</div>
+          <div class="stat-val" id="score">0</div>
+        </div>
+        <div class="stat-box moves-box">
+          <div class="stat-label">MOVES</div>
+          <div class="stat-val" id="moves">30</div>
+        </div>
+      </div>
+    </header>
+
+    <button id="btn-new">NEW GAME</button>
+
+    <div id="board-wrap">
+      <div id="board"></div>
+      <div id="overlay" class="hidden">
+        <div class="ov-card">
+          <div id="ov-title">GAME OVER</div>
+          <div class="ov-score-row">SCORE <span id="ov-score">0</span></div>
+          <button id="btn-retry">PLAY AGAIN</button>
+        </div>
+      </div>
+    </div>
+
+    <p class="tip">TAP A TILE · TAP ADJACENT TO SWAP · OR SWIPE</p>
+  </div>
+  <script src="game.js"></script>
+</body>
+</html>

@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
-console.log('Aquarium module loaded');
+console.log('Microcosm module loaded');
 try {
 
 // ── Scene ──────────────────────────────────────
@@ -471,7 +471,7 @@ function animate() {
 
 // ── Start ──────────────────────────────────────
 spawnCreature(new THREE.Vector3(0, 0.15, 0));
-console.log('Aquarium setup complete (ground arena), starting animation');
+console.log('Microcosm setup complete, starting animation');
 requestAnimationFrame(animate);
 
 } catch (e) { console.error('INIT ERROR:', e); }
