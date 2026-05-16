@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Aquarium</title>
+  <link rel="stylesheet" href="style.css">
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.157.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.157.0/examples/jsm/"
+    }
+  }
+  </script>
+</head>
+<body>
+  <canvas id="game"></canvas>
+
+  <div id="ui">
+    <div id="hud">
+      <span id="title">AQUARIUM</span>
+      <span id="info"></span>
+    </div>
+
+    <div id="palette">
+      <button class="action-btn" id="sprinkle-btn">Sprinkle</button>
+      <button class="action-btn" id="add-creature-btn">+1 Creature</button>
+      <button class="action-btn" id="speed-btn">Speed x1</button>
+      <button class="action-btn" id="pause-btn">Pause</button>
+      <button class="action-btn" id="reset-btn">Reset</button>
+    </div>
+  </div>
+
+  <script type="module" src="game.js"></script>
+</body>
+</html>
