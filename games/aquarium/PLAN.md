@@ -4,7 +4,7 @@
 
 ユーザーは「単純な能力を持つ生き物の生態を観察するシミュレーションゲーム」を作りたい。クラリファイの結果:
 
-- **テーマ**: ガラス水槽の微生物 (3D 透明タンクの中で動く小さな生き物)
+- **テーマ**: 平面地面の微生物 (暗い地面の上を動く小さな生き物)
 - **プレイヤー関与**: 神視点で軽く干渉
 - **描画**: Three.js で3D
 
@@ -46,14 +46,12 @@ games/aquarium/
 `games/fire-garden/game.js:1-46` の renderer/scene/camera/OrbitControls 部をテンプレ流用。
 
 - **Renderer**: `WebGLRenderer({ antialias: true })`, pixelRatio キャップ2
-- **Camera**: PerspectiveCamera 50°, 水槽を斜め俯瞰する位置
-- **Controls**: OrbitControls、ターゲットを水槽中心、距離2.5–10、ダンピング有効
+- **Camera**: PerspectiveCamera 50°, 地面を斜め俯瞰する位置
+- **Controls**: OrbitControls、ターゲットを地面中心、距離2.5–10、ダンピング有効
 - **Lighting**: AmbientLight 0.4 + DirectionalLight 上方 1.0
-- **水槽 (ガラス)**:
-  - 床+4側面を `MeshPhysicalMaterial` で `transmission: 1.0, roughness: 0.05, thickness: 0.3, ior: 1.5, transparent: true`
-  - サイズ例: 4 × 3 × 4 (W × H × D)。上面は開放
-  - 任意で水ボリュームを表す薄青のうっすらキューブを内側に
-- **床外**: 軽く暗めの背景色のみ。地面は無くてよい (水槽だけ浮いてる演出)
+- **地面 (アリーナ)**:
+  - 暗色の平面グラウンド (12x12) + 円形の境界リング (半径5)
+  - 素材: `MeshStandardMaterial` 暗褐色
 
 ---
 

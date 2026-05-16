@@ -13,11 +13,11 @@ const scene = new THREE.Scene();
 scene.background = new THREE.Color('#1a1a2e');
 
 const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.5, 50);
-camera.position.set(4, 5, 7);
-camera.lookAt(0, 1.5, 0);
+camera.position.set(6, 8, 9);
+camera.lookAt(0, 0.3, 0);
 
 const controls = new OrbitControls(camera, renderer.domElement);
-controls.target.set(0, 1.5, 0);
+controls.target.set(0, 0.3, 0);
 controls.enableDamping = true;
 controls.dampingFactor = 0.08;
 controls.minDistance = 2.5;
@@ -31,76 +31,28 @@ const sun = new THREE.DirectionalLight('#ffffff', 1.0);
 sun.position.set(5, 8, 3);
 scene.add(sun);
 
-// ── Glass Tank ─────────────────────────────────
-const TANK_W = 4;
-const TANK_H = 3;
-const TANK_D = 4;
-const HALF_W = TANK_W / 2;
-const HALF_D = TANK_D / 2;
+// ── Arena Ground ────────────────────────────────
+const ARENA_HALF = 5;
 
-const glassMat = new THREE.MeshPhysicalMaterial({
-  color: '#ffffff',
-  transmission: 1.0,
-  roughness: 0.05,
-  thickness: 0.3,
-  ior: 1.5,
-  transparent: true,
-  opacity: 0.4,
-  side: THREE.DoubleSide,
-  envMapIntensity: 0.5,
-});
-
-// Floor
-const floor = new THREE.Mesh(
-  new THREE.PlaneGeometry(TANK_W, TANK_D),
-  glassMat
+// Ground plane
+const ground = new THREE.Mesh(
+  new THREE.PlaneGeometry(ARENA_HALF * 2 + 2, ARENA_HALF * 2 + 2),
+  new THREE.MeshStandardMaterial({ color: '#3a3020', roughness: 0.85 })
 );
-floor.rotation.x = -Math.PI / 2;
-floor.position.y = 0;
-floor.name = 'floor';
-scene.add(floor);
+ground.rotation.x = -Math.PI / 2;
+ground.position.y = 0;
+ground.receiveShadow = true;
+ground.name = 'ground';
+scene.add(ground);
 
-// Walls
-const wallGeoFb = new THREE.BoxGeometry(TANK_W, TANK_H, 0.02);
-const wallGeoLr = new THREE.BoxGeometry(0.02, TANK_H, TANK_D);
-
-// Back
-const backWall = new THREE.Mesh(wallGeoFb, glassMat);
-backWall.position.set(0, TANK_H / 2, -HALF_D);
-backWall.name = 'backWall';
-scene.add(backWall);
-
-// Front
-const frontWall = new THREE.Mesh(wallGeoFb, glassMat);
-frontWall.position.set(0, TANK_H / 2, HALF_D);
-frontWall.name = 'frontWall';
-scene.add(frontWall);
-
-// Left
-const leftWall = new THREE.Mesh(wallGeoLr, glassMat);
-leftWall.position.set(-HALF_W, TANK_H / 2, 0);
-leftWall.name = 'leftWall';
-scene.add(leftWall);
-
-// Right
-const rightWall = new THREE.Mesh(wallGeoLr, glassMat);
-rightWall.position.set(HALF_W, TANK_H / 2, 0);
-rightWall.name = 'rightWall';
-scene.add(rightWall);
-
-// Water volume (faint blue fill)
-const water = new THREE.Mesh(
-  new THREE.BoxGeometry(TANK_W - 0.2, TANK_H - 0.1, TANK_D - 0.2),
-  new THREE.MeshBasicMaterial({
-    color: '#4488cc',
-    transparent: true,
-    opacity: 0.06,
-    side: THREE.DoubleSide,
-  })
-);
-water.position.set(0, TANK_H / 2, 0);
-water.name = 'water';
-scene.add(water);
+// Arena ring — subtle border marking the play area
+const ringGeo = new THREE.TorusGeometry(ARENA_HALF, 0.04, 8, 48);
+const ringMat = new THREE.MeshStandardMaterial({ color: '#5a5040', roughness: 0.5, emissive: '#1a1510', emissiveIntensity: 0.3 });
+const ring = new THREE.Mesh(ringGeo, ringMat);
+ring.rotation.x = -Math.PI / 2;
+ring.position.y = 0.02;
+ring.name = 'arenaRing';
+scene.add(ring);
 
 // ── Nutrient System ────────────────────────────
 const nutrients = [];
@@ -129,6 +81,9 @@ function updateNutrients(dt) {
       continue;
     }
 
+    // Gravity
+    n.vel.y -= 9.8 * dt;
+
     // Brownian sway
     n.vel.x += (Math.random() - 0.5) * 0.02;
     n.vel.z += (Math.random() - 0.5) * 0.02;
@@ -150,9 +105,9 @@ function updateNutrients(dt) {
       n.vel.z *= 0.9;
     }
 
-    // Clamp to tank horizontal bounds
-    n.pos.x = Math.max(-HALF_W + 0.1, Math.min(HALF_W - 0.1, n.pos.x));
-    n.pos.z = Math.max(-HALF_D + 0.1, Math.min(HALF_D - 0.1, n.pos.z));
+    // Clamp to arena horizontal bounds
+    n.pos.x = Math.max(-ARENA_HALF + 0.1, Math.min(ARENA_HALF - 0.1, n.pos.x));
+    n.pos.z = Math.max(-ARENA_HALF + 0.1, Math.min(ARENA_HALF - 0.1, n.pos.z));
 
     n.mesh.position.copy(n.pos);
 
@@ -198,13 +153,16 @@ function updateCreatures(dt) {
     c.age += dt;
     c.eatFlash = Math.max(0, c.eatFlash - dt);
 
-    // 1. Drift — Brownian motion with sine-wave bias
+    // 1. Drift — Brownian motion on the ground plane
     c.phase += dt * 2;
-    c.vel.x += Math.sin(c.phase) * 0.3 * dt;
-    c.vel.z += Math.cos(c.phase * 0.7) * 0.3 * dt;
-    c.vel.x += (Math.random() - 0.5) * 0.2 * dt;
-    c.vel.z += (Math.random() - 0.5) * 0.2 * dt;
-    c.vel.y += Math.sin(c.phase * 0.5) * 0.1 * dt;
+    c.vel.x += Math.sin(c.phase) * 0.4 * dt;
+    c.vel.z += Math.cos(c.phase * 0.7) * 0.4 * dt;
+    c.vel.x += (Math.random() - 0.5) * 0.3 * dt;
+    c.vel.z += (Math.random() - 0.5) * 0.3 * dt;
+    // Subtle vertical bob
+    c.vel.y += Math.sin(c.phase * 1.3) * 0.05 * dt;
+    // Stay near ground
+    if (c.pos.y > 0.2) c.vel.y -= 0.2 * dt;
 
     // 2. Seek nearest nutrient within radius 2.0
     let nearestDist = 2.0;
@@ -222,9 +180,9 @@ function updateCreatures(dt) {
         .copy(nearestNutrient.pos)
         .sub(c.pos)
         .normalize();
-      c.vel.x += dir.x * 0.8 * dt;
-      c.vel.y += dir.y * 0.8 * dt;
-      c.vel.z += dir.z * 0.8 * dt;
+      c.vel.x += dir.x * 1.0 * dt;
+      c.vel.z += dir.z * 1.0 * dt;
+      c.vel.y += dir.y * 0.3 * dt;
     }
 
     // 3. Eat nutrients in contact
@@ -247,15 +205,16 @@ function updateCreatures(dt) {
     c.pos.y += c.vel.y * dt;
     c.pos.z += c.vel.z * dt;
 
-    // 5. Bounds — spring force near walls
-    const margin = 0.3;
+    // 5. Bounds — spring force near arena edge
+    const margin = 0.5;
     const spring = 1.5;
-    if (c.pos.x > HALF_W - margin) c.vel.x -= (c.pos.x - (HALF_W - margin)) * spring * dt;
-    if (c.pos.x < -HALF_W + margin) c.vel.x -= (c.pos.x - (-HALF_W + margin)) * spring * dt;
-    if (c.pos.z > HALF_D - margin) c.vel.z -= (c.pos.z - (HALF_D - margin)) * spring * dt;
-    if (c.pos.z < -HALF_D + margin) c.vel.z -= (c.pos.z - (-HALF_D + margin)) * spring * dt;
-    if (c.pos.y > TANK_H - margin) c.vel.y -= (c.pos.y - (TANK_H - margin)) * spring * dt;
-    if (c.pos.y < margin) c.vel.y -= (c.pos.y - margin) * spring * dt;
+    if (c.pos.x > ARENA_HALF - margin) c.vel.x -= (c.pos.x - (ARENA_HALF - margin)) * spring * dt;
+    if (c.pos.x < -ARENA_HALF + margin) c.vel.x -= (c.pos.x - (-ARENA_HALF + margin)) * spring * dt;
+    if (c.pos.z > ARENA_HALF - margin) c.vel.z -= (c.pos.z - (ARENA_HALF - margin)) * spring * dt;
+    if (c.pos.z < -ARENA_HALF + margin) c.vel.z -= (c.pos.z - (-ARENA_HALF + margin)) * spring * dt;
+    // Vertical bounds — keep near ground, don't fly too high
+    if (c.pos.y > 2.0) c.vel.y -= (c.pos.y - 2.0) * spring * dt;
+    if (c.pos.y < 0.05) { c.pos.y = 0.05; c.vel.y = Math.max(0, c.vel.y); }
 
     // 6. Energy decay
     c.energy -= dt * 0.04;
@@ -282,7 +241,7 @@ const raycaster = new THREE.Raycaster();
 const mouse = new THREE.Vector2();
 const clickPlane = new THREE.Plane().setFromNormalAndCoplanarPoint(
   new THREE.Vector3(0, -1, 0),
-  new THREE.Vector3(0, 2.7, 0)
+  new THREE.Vector3(0, 0.05, 0)
 );
 const intersectPt = new THREE.Vector3();
 
@@ -296,12 +255,12 @@ renderer.domElement.addEventListener('click', (e) => {
   if (raycaster.ray.intersectPlane(clickPlane, intersectPt)) {
     const x = intersectPt.x;
     const z = intersectPt.z;
-    if (Math.abs(x) < HALF_W - 0.2 && Math.abs(z) < HALF_D - 0.2) {
+    if (Math.abs(x) < ARENA_HALF - 0.2 && Math.abs(z) < ARENA_HALF - 0.2) {
       const count = 1 + Math.floor(Math.random() * 3);
       for (let i = 0; i < count; i++) {
         const p = new THREE.Vector3(
           x + (Math.random() - 0.5) * 0.15,
-          2.7,
+          1.5 + Math.random() * 0.5,
           z + (Math.random() - 0.5) * 0.15
         );
         spawnNutrient(p);
@@ -319,9 +278,9 @@ let elapsedSeconds = 0;
 document.getElementById('sprinkle-btn').addEventListener('click', () => {
   for (let i = 0; i < 5; i++) {
     const p = new THREE.Vector3(
-      (Math.random() - 0.5) * (TANK_W - 0.5),
-      2.7,
-      (Math.random() - 0.5) * (TANK_D - 0.5)
+      (Math.random() - 0.5) * (ARENA_HALF * 2 - 1),
+      1.5 + Math.random() * 1.0,
+      (Math.random() - 0.5) * (ARENA_HALF * 2 - 1)
     );
     spawnNutrient(p);
   }
@@ -330,9 +289,9 @@ document.getElementById('sprinkle-btn').addEventListener('click', () => {
 // +1 Creature
 document.getElementById('add-creature-btn').addEventListener('click', () => {
   const p = new THREE.Vector3(
-    (Math.random() - 0.5) * (TANK_W - 0.5),
-    0.5 + Math.random() * (TANK_H - 1.0),
-    (Math.random() - 0.5) * (TANK_D - 0.5)
+    (Math.random() - 0.5) * (ARENA_HALF * 2 - 1),
+    0.15,
+    (Math.random() - 0.5) * (ARENA_HALF * 2 - 1)
   );
   spawnCreature(p);
 });
@@ -355,7 +314,7 @@ document.getElementById('reset-btn').addEventListener('click', () => {
   creatures.length = 0;
   for (const n of nutrients) scene.remove(n.mesh);
   nutrients.length = 0;
-  spawnCreature(new THREE.Vector3(0, 1.5, 0));
+  spawnCreature(new THREE.Vector3(0, 0.15, 0));
   paused = false;
   speedMultiplier = 1;
   elapsedSeconds = 0;
@@ -397,8 +356,8 @@ function animate() {
 }
 
 // ── Start ──────────────────────────────────────
-spawnCreature(new THREE.Vector3(0, 1.5, 0));
-console.log('Aquarium setup complete, starting animation');
+spawnCreature(new THREE.Vector3(0, 0.15, 0));
+console.log('Aquarium setup complete (ground arena), starting animation');
 requestAnimationFrame(animate);
 
 } catch (e) { console.error('INIT ERROR:', e); }
