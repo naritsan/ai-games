@@ -98,12 +98,12 @@ canvas {
   box-shadow: 0 0 8px rgba(68, 136, 204, 0.3);
 }
 
-/* ── Speed Popup ─────────────────────────────── */
-#speed-wrap {
+/* ── Popup Menus (Speed & Food Size) ─────────── */
+#speed-wrap, #foodsize-wrap {
   position: relative;
 }
 
-#speed-popup {
+#speed-popup, #foodsize-popup {
   position: absolute;
   bottom: calc(100% + 8px);
   left: 50%;
@@ -117,7 +117,7 @@ canvas {
   backdrop-filter: blur(12px);
 }
 
-#speed-popup.hidden {
+#speed-popup.hidden, #foodsize-popup.hidden {
   display: none;
 }
 

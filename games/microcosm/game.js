@@ -582,7 +582,7 @@ renderer.domElement.addEventListener('click', (e) => {
           1.5 + Math.random() * 0.5,
           z + (Math.random() - 0.5) * 0.15
         );
-        spawnNutrient(p, randomNutrientSize());
+        spawnNutrient(p, getFoodSize());
       }
     }
   }
@@ -670,7 +670,7 @@ document.getElementById('sprinkle-btn').addEventListener('click', () => {
       1.5 + Math.random() * 1.0,
       (Math.random() - 0.5) * (ARENA_HALF * 2 - 1)
     );
-    spawnNutrient(p, randomNutrientSize());
+    spawnNutrient(p, getFoodSize());
   }
 });
 
@@ -710,8 +710,40 @@ speedPopup.querySelectorAll('.speed-opt').forEach(btn => {
   });
 });
 
+// Food size selector
+let selectedFoodSize = 'm';
+const foodsizeBtn = document.getElementById('foodsize-btn');
+const foodsizePopup = document.getElementById('foodsize-popup');
+
+function setFoodSize(size) {
+  selectedFoodSize = size;
+  const label = size === 'r' ? 'Random' : size.toUpperCase();
+  foodsizeBtn.textContent = `Food: ${label}`;
+  foodsizePopup.querySelectorAll('.speed-opt').forEach(b => {
+    b.classList.toggle('active', b.dataset.size === size);
+  });
+  foodsizePopup.classList.add('hidden');
+}
+
+function getFoodSize() {
+  return selectedFoodSize === 'r' ? randomNutrientSize() : selectedFoodSize;
+}
+
+foodsizeBtn.addEventListener('click', (e) => {
+  e.stopPropagation();
+  foodsizePopup.classList.toggle('hidden');
+});
+
+foodsizePopup.querySelectorAll('.speed-opt').forEach(btn => {
+  btn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    setFoodSize(btn.dataset.size);
+  });
+});
+
 document.addEventListener('click', () => {
   speedPopup.classList.add('hidden');
+  foodsizePopup.classList.add('hidden');
 });
 
 // Pause toggle
