@@ -628,7 +628,8 @@ function updateCreatures(dt) {
           other.pos.z += (other.pos.z - c.pos.z) / d * 0.3;
           // If victim dies, spawn food based on remaining energy
           if (other.energy <= 0) {
-            const corpseEnergy = Math.max(0.1, other.energy + 0.2); // energy before the killing blow
+            const preDmg = other.energy + 0.2;
+            const corpseEnergy = Math.max(0.1, preDmg);
             const nutrientCount = Math.max(1, Math.floor(corpseEnergy * 8)); // ~1-10 nutrients
             for (let k = 0; k < nutrientCount; k++) {
               const size = corpseEnergy > 0.8 ? 'l' : corpseEnergy > 0.4 ? 'm' : 's';
