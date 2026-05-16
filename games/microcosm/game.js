@@ -319,7 +319,7 @@ function spawnCreature(pos) {
     // Individual traits
     baseSpeed,
     satietyDecay: 0.08 + Math.random() * 0.04, // ~2 game hours to deplete
-    detectRange: 3.5 + Math.random() * 2.0,
+    detectRange: 1.5 + Math.random() * 1.5,
     perceptionRing,
     reactionTime: 0.2 + Math.random() * 1.3,
     aggression: Math.random(), // 0=docile, 1=fierce
