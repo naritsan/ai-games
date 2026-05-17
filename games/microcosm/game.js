@@ -569,7 +569,8 @@ function updateCreatures(dt) {
       const dist = c.pos.distanceTo(other.pos);
       if (dist < c.detectRange) c.creatureInRange = true;
       // Frantic creatures target others as prey
-      if (c.state === 'frantic' && dist < nearestDist) {
+      const isFamily2 = (c.parent === other || other.parent === c);
+      if (c.state === 'frantic' && dist < nearestDist && !isFamily2) {
         nearestDist = dist;
         nearestPrey = other;
         nearestNutrient = null;
@@ -751,7 +752,9 @@ function updateCreatures(dt) {
         c.heading += (Math.random() - 0.5) * (c.state === 'frantic' ? 1.5 : 0.5);
 
         // Frantic creatures attack others on contact
-        if (c.state === 'frantic' && c.attackCooldown <= 0) {
+        // No attacking parent or children
+        const isFamily = (c.parent === other || other.parent === c);
+        if (c.state === 'frantic' && c.attackCooldown <= 0 && !isFamily) {
           const dmg = c.attackDamage * (c.level / Math.max(1, other.level));
           other.hp -= dmg;
           other.lastHitTime = other.age;
