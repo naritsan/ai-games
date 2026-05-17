@@ -630,14 +630,22 @@ function updateCreatures(dt) {
         pickWanderTarget(c);
       }
     }
-    // Parent stays near children
+    // Parent stays near children and feeds them
     if (c.children && c.children.length > 0) {
-      // Filter dead children
       c.children = c.children.filter(ch => creatures.includes(ch));
-      // Stay near youngest child
-      const youngest = c.children[c.children.length - 1];
-      if (youngest && c.pos.distanceTo(youngest.pos) > 2.5 && c.state === 'exploring') {
-        c.wanderTarget = youngest.pos.clone();
+      for (const child of c.children) {
+        const dist = c.pos.distanceTo(child.pos);
+        // Stay near children
+        if (dist > 2.5 && c.state === 'exploring') {
+          c.wanderTarget = child.pos.clone();
+        }
+        // Feed starving child
+        if (child.energy < child.maxEnergy * 0.4 && c.energy > c.maxEnergy * 0.3 && dist < 2.0) {
+          const transfer = dt * 0.05;
+          c.energy -= transfer;
+          child.energy += transfer;
+          child.satiety = Math.min(child.maxSatiety, child.satiety + dt * 0.03);
+        }
       }
     }
 
