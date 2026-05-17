@@ -339,7 +339,6 @@ function spawnCreature(pos) {
     foodInRange: false,
     creatureInRange: false,
     attackCooldown: 0,
-    radius: 0.2,
     ringMesh,
     reactionTime: 0.2 + Math.random() * 1.3,
     aggression: Math.random(), // 0=docile, 1=fierce
@@ -378,8 +377,9 @@ function updateCreatures(dt) {
       c.growth = Math.min(1.0, c.growth + dt * 0.015);
     }
 
-    // ── Eating: contact-based ──────────────────────
-    const eatRange = 0.35;
+    // ── Eating: contact-based, multi-creature ──────
+    // Find food in contact range (scales with creature size)
+    const eatRange = 0.25 + c.level * 0.05; // bigger creatures have longer reach
     let touchingFood = null;
     for (const n of nutrients) {
       if (c.pos.distanceTo(n.pos) < eatRange) {
@@ -388,25 +388,33 @@ function updateCreatures(dt) {
       }
     }
 
-    // ── Eating: process food consumption ───────────
-    if (touchingFood && c.state !== 'resting' && c.state !== 'torpor') {
+    if (touchingFood && c.state !== 'resting') {
       c.state = 'eating';
       const n = touchingFood;
       n.eaters++;
+      // Multi-eater speed boost
       const eatRate = dt / n.eatTime * (1 + (n.eaters - 1) * 0.5);
       n.eatProgress += eatRate;
+      // Shrink food
       const remain = 1 - n.eatProgress;
       n.mesh.scale.copy(n.originalScale).multiplyScalar(Math.max(0.05, remain));
+      // Award energy in ticks
       const prevProgress = n.eatProgress - eatRate;
       if (Math.floor(n.eatProgress * 4) > Math.floor(prevProgress * 4)) {
         c.energy = Math.min(c.maxEnergy, c.energy + n.maxEnergy * 0.25);
         c.satiety = Math.min(c.maxSatiety, c.satiety + n.maxSatiety * 0.25);
         c.eatFlash = 0.3;
       }
+      // Pulse while eating
+      const gs = (0.5 + c.growth * 0.7) * (0.8 + c.level * 0.2);
+      const es = 0.7 + c.energy * 0.4;
+      const pulse = 1 + Math.sin(c.phase * 6) * 0.06;
+      c.mesh.scale.setScalar(gs * es * pulse);
       if (n.eatProgress >= 1) {
         c.satisfiedTimer = 1 + Math.random() * 1.5;
         c.wanderTarget = null;
         c.foodNoticeAt = 0;
+        // Leveling progress
         c.foodEaten += n.maxEnergy;
         while (c.foodEaten >= c.foodToNext) {
           c.foodEaten -= c.foodToNext;
@@ -417,16 +425,21 @@ function updateCreatures(dt) {
           c.maxSatiety += 0.15;
           c.attackDamage += 0.05;
           c.detectRange = c.baseDetectRange * (0.7 + c.level * 0.3);
+          // Update ring scale
           c.ringMesh.scale.setScalar(c.detectRange);
+          // Flash effect
           c.eatFlash = 0.8;
         }
         scene.remove(n.mesh);
         nutrients.splice(nutrients.indexOf(n), 1);
-        c.state = 'exploring';
-        c.stateTimer = 2 + Math.random() * 3;
       }
-    } else if (c.state === 'eating') {
-      // Lost contact with food
+      c.phase += dt * 3;
+      c.satiety -= dt * c.satietyDecay;
+      c.mesh.position.copy(c.pos);
+      continue;
+    }
+
+    if (c.state === 'eating') {
       c.state = 'exploring';
       c.stateTimer = 1 + Math.random();
     }
@@ -561,18 +574,14 @@ function updateCreatures(dt) {
           speed = c.baseSpeed * 1.4 * urgency * speedMod * closeFactor;
           targetAngle = angleToward(c.pos, targetPos);
           c.stateTimer = 0;
-          const contactD = 0.4;
-          if (nearestNutrient && dist < contactD) {
+          const seekEatRange = 0.25 + c.level * 0.05;
+          if (nearestNutrient && dist < seekEatRange) {
             c.foodNoticeAt = 0;
             continue;
           }
         }
         break;
       }
-
-      case 'eating':
-        speed = 0;
-        break;
 
       case 'torpor':
         speed = c.baseSpeed * 0.03;
@@ -639,7 +648,7 @@ function updateCreatures(dt) {
       if (i === j) continue;
       const other = creatures[j];
       const d = c.pos.distanceTo(other.pos);
-      const minDist = 0.55;
+      const minDist = 0.4 + c.level * 0.06;
       if (d < minDist && d > 0.001) {
         const myForce = 1 + c.aggression * 2 + (1 - c.satiety) * 2;
         const theirForce = 1 + other.aggression * 2 + (1 - other.satiety) * 2;
@@ -709,12 +718,12 @@ function updateCreatures(dt) {
     const flashBoost = c.eatFlash > 0 ? 1 + c.eatFlash * 0.5 : 1;
     let scale = growthSize * energyScale * flashBoost;
     if (c.state === 'resting') scale *= 0.95 + Math.sin(c.phase * 3) * 0.05;
-    if (c.state === 'eating') scale *= 1 + Math.sin(c.phase * 6) * 0.06;
     if (c.state === 'torpor') scale *= 0.6;
     if (c.state === 'frantic') scale *= 1.1 + Math.sin(c.phase * 8) * 0.08;
     c.mesh.scale.setScalar(scale);
-    c.radius = 0.2 * scale;
-    if (c.pos.y < c.radius) c.pos.y = c.radius;
+
+    const radius = 0.2 * scale;
+    if (c.pos.y < radius) c.pos.y = radius;
 
     const t = Math.max(0, Math.min(1, c.energy / c.maxEnergy));
     c.mesh.material.color.setRGB(1 - t, t * 0.85, 0);
