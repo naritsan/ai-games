@@ -334,12 +334,12 @@ function spawnCreature(pos) {
 
   // Name label sprite
   const labelCanvas = document.createElement('canvas');
-  labelCanvas.width = 128; labelCanvas.height = 32;
+  labelCanvas.width = 200; labelCanvas.height = 32;
   const lctx = labelCanvas.getContext('2d');
-  lctx.font = '14px system-ui, sans-serif';
+  lctx.font = '12px system-ui, sans-serif';
   lctx.textAlign = 'center';
   lctx.fillStyle = '#ffffff';
-  lctx.fillText('...', 64, 18);
+  lctx.fillText('...', 100, 18);
   const labelTex = new THREE.CanvasTexture(labelCanvas);
   labelTex.minFilter = THREE.LinearFilter;
   const labelSpriteMat = new THREE.SpriteMaterial({ map: labelTex, transparent: true, depthTest: false, depthWrite: false });
@@ -853,11 +853,11 @@ function updateCreatures(dt) {
     // Name label update (throttled)
     if (Math.floor(c.age * 4) !== Math.floor((c.age - dt) * 4)) {
       const lctx = c.labelCanvas.getContext('2d');
-      lctx.clearRect(0, 0, 128, 32);
-      lctx.font = '14px system-ui, sans-serif';
+      lctx.clearRect(0, 0, 200, 32);
+      lctx.font = '12px system-ui, sans-serif';
       lctx.textAlign = 'center';
       lctx.fillStyle = c.highlighted ? '#ffff44' : '#ffffff';
-      lctx.fillText(c.name, 64, 18);
+      lctx.fillText(c.name, 100, 18);
       c.labelSprite.material.map.needsUpdate = true;
     }
     c.labelSprite.position.y = c.radius + 0.35;
