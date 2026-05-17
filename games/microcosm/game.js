@@ -382,7 +382,7 @@ function updateCreatures(dt) {
     const eatRange = 0.25 + c.level * 0.05; // bigger creatures have longer reach
     let touchingFood = null;
     for (const n of nutrients) {
-      if (c.pos.distanceTo(n.pos) < eatRange) {
+      if (c.pos.distanceTo(n.pos) < eatRange + NUTRIENT_DEFS[n.size].radius) {
         touchingFood = n;
         break;
       }
