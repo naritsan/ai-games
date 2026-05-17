@@ -639,12 +639,12 @@ function updateCreatures(dt) {
         if (dist > 2.5 && c.state === 'exploring') {
           c.wanderTarget = child.pos.clone();
         }
-        // Feed starving child
-        if (child.energy < child.maxEnergy * 0.4 && c.energy > c.maxEnergy * 0.3 && dist < 2.0) {
-          const transfer = dt * 0.05;
+        // Feed hungry child until satiety reaches 70%
+        if (child.satiety < 0.7 && c.energy > c.maxEnergy * 0.2 && dist < 2.0) {
+          const transfer = dt * 0.08;
           c.energy -= transfer;
-          child.energy += transfer;
-          child.satiety = Math.min(child.maxSatiety, child.satiety + dt * 0.03);
+          child.energy = Math.min(child.maxEnergy, child.energy + transfer);
+          child.satiety = Math.min(child.maxSatiety, child.satiety + dt * 0.06);
         }
       }
     }
