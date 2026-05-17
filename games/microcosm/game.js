@@ -317,14 +317,15 @@ function spawnCreature(pos) {
   hlCanvas.width = hlCanvas.height = 64;
   const hlctx = hlCanvas.getContext('2d');
   const gradient = hlctx.createRadialGradient(32, 32, 0, 32, 32, 32);
-  gradient.addColorStop(0, 'rgba(255,255,200,0.9)');
-  gradient.addColorStop(0.3, 'rgba(255,255,100,0.5)');
-  gradient.addColorStop(0.7, 'rgba(255,200,0,0.1)');
+  gradient.addColorStop(0, 'rgba(255,255,220,1)');
+  gradient.addColorStop(0.2, 'rgba(255,255,150,0.8)');
+  gradient.addColorStop(0.5, 'rgba(255,220,50,0.3)');
+  gradient.addColorStop(0.8, 'rgba(255,180,0,0.05)');
   gradient.addColorStop(1, 'rgba(255,200,0,0)');
   hlctx.fillStyle = gradient;
   hlctx.fillRect(0, 0, 64, 64);
   const hlTex = new THREE.CanvasTexture(hlCanvas);
-  const hlDiscGeo = new THREE.PlaneGeometry(0.8, 0.8);
+  const hlDiscGeo = new THREE.PlaneGeometry(1.2, 1.2);
   const hlDiscMat = new THREE.MeshBasicMaterial({ map: hlTex, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending });
   const hlDisc = new THREE.Mesh(hlDiscGeo, hlDiscMat);
   hlDisc.rotation.x = -Math.PI / 2;
@@ -792,10 +793,10 @@ function updateCreatures(dt) {
     c.ringMesh.position.z = c.pos.z;
     // Highlight disc
     if (c.highlighted) {
-      c.hlDisc.material.opacity = 0.6 + Math.sin(c.phase * 4) * 0.3;
-      c.hlDisc.scale.setScalar(0.9 + Math.sin(c.phase * 4) * 0.15);
-      c.mesh.material.emissiveIntensity = 1.2;
-      scale *= 1.1;
+      c.hlDisc.material.opacity = 1.0 + Math.sin(c.phase * 4) * 0.4;
+      c.hlDisc.scale.setScalar(1.0 + Math.sin(c.phase * 4) * 0.2);
+      c.mesh.material.emissiveIntensity = 1.8;
+      scale *= 1.15;
     } else {
       c.hlDisc.material.opacity = 0;
     }
