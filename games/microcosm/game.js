@@ -510,8 +510,11 @@ function updateCreatures(dt) {
           // Flash effect
           c.eatFlash = 0.8;
         }
-        scene.remove(n.mesh);
-        nutrients.splice(nutrients.indexOf(n), 1);
+        const nIdx = nutrients.indexOf(n);
+        if (nIdx >= 0) {
+          scene.remove(n.mesh);
+          nutrients.splice(nIdx, 1);
+        }
       }
       c.phase += dt * 3;
       c.mesh.position.copy(c.pos);
@@ -626,9 +629,6 @@ function updateCreatures(dt) {
         c.foodNoticeAt = 0;
       }
     }
-
-    // ── Parent-child connection lines ──────────────
-    updateFamilyLines();
 
     // ── Parent-child behavior ──────────────────────
     // Child follows parent until Lv2
@@ -1042,7 +1042,7 @@ function refreshDetails() {
     html += `<div class="detail-card">
       <div class="detail-header">
         <div class="creature-dot" style="background:rgb(${hpR},${hpG},0);box-shadow:0 0 8px rgb(${hpR},${hpG},0)"></div>
-        <div class="detail-name" style="cursor:pointer" title="Click to rename" onclick="this.contentEditable='true';this.focus();this.onblur=()=>{this.contentEditable='false';window._renameCreature(${i},this.textContent)}">${c.name}</div>
+        <div class="detail-name" style="cursor:pointer" title="Click to rename" onclick="this.contentEditable='true';this.focus();this.onblur=()=>{this.contentEditable='false';window._renameCreature(${i},this.textContent)}">${esc(c.name)}</div>
       </div>
       <div class="detail-grid">
         <div>Level <span>${c.level}</span></div>
@@ -1059,6 +1059,13 @@ function refreshDetails() {
     </div>`;
   }
   body.innerHTML = html;
+}
+
+// HTML escape for safe innerHTML insertion
+function esc(s) {
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
 }
 
 // Global rename handler for details overlay
@@ -1219,7 +1226,9 @@ document.getElementById('pause-btn').addEventListener('click', () => {
 
 // Reset
 document.getElementById('reset-btn').addEventListener('click', () => {
-  for (const c of creatures) scene.remove(c.mesh);
+  for (const c of creatures) { scene.remove(c.mesh); scene.remove(c.ringMesh); }
+  for (const [_, line] of familyLines) scene.remove(line);
+  familyLines.clear();
   creatures.length = 0;
   for (const n of nutrients) scene.remove(n.mesh);
   nutrients.length = 0;
@@ -1257,10 +1266,10 @@ function timePeriod(h) {
 }
 
 let statusUpdateTimer = 0;
-function updateHUD() {
+function updateHUD(realDt) {
   document.getElementById('info').textContent =
     `Day ${dayCount} | ${formatTime(gameHours)} (${timePeriod(gameHours)}) | Creatures: ${creatures.length}`;
-  statusUpdateTimer += 0.016;
+  statusUpdateTimer += realDt;
   if (statusUpdateTimer > 0.5) {
     updateStatusPanel();
     statusUpdateTimer = 0;
@@ -1303,12 +1312,12 @@ function updateStatusPanel() {
     const hpColor = `rgb(${Math.floor((1 - c.hp) * 255)},${Math.floor(c.hp * 200)},0)`;
     const enColor = `rgb(${Math.floor((1 - c.energy/c.maxEnergy) * 255)},${Math.floor((c.energy/c.maxEnergy) * 200)},0)`;
     const satColor = c.satiety > 0.3 ? '#88bb44' : c.satiety > 0 ? '#ddaa33' : '#dd4433';
-    const parentInfo = c.parent && creatures.includes(c.parent) ? ` ← ${c.parent.name}` : '';
+    const parentInfo = c.parent && creatures.includes(c.parent) ? ` ← ${esc(c.parent.name)}` : '';
     const childInfo = c.children && c.children.filter(ch => creatures.includes(ch)).length > 0 ? ` +${c.children.filter(ch => creatures.includes(ch)).length}` : '';
     html += `<div class="creature-row" data-idx="${i}" onclick="window.focusCreature(${i})">
       <div class="creature-dot" style="background:${dotColor};box-shadow:0 0 6px ${dotColor}"></div>
       <div class="creature-stats">
-        <div class="stat-line">${c.name}${parentInfo}${childInfo} <span class="stat-label">Lv${c.level} ${stateLabel}</span></div>
+        <div class="stat-line">${esc(c.name)}${parentInfo}${childInfo} <span class="stat-label">Lv${c.level} ${stateLabel}</span></div>
         <div class="gauge-row"><span class="gauge-label">HP</span><div class="gauge-bg"><div class="gauge-fill" style="width:${hpPct}%;background:${hpColor}"></div></div><span class="gauge-pct">${hpPct}%</span></div>
         <div class="gauge-row"><span class="gauge-label">EN</span><div class="gauge-bg"><div class="gauge-fill" style="width:${enPct}%;background:${enColor}"></div></div><span class="gauge-pct">${enPct}%</span></div>
         <div class="gauge-row"><span class="gauge-label">SAT</span><div class="gauge-bg"><div class="gauge-fill" style="width:${satPct}%;background:${satColor}"></div></div><span class="gauge-pct">${satPct}%</span></div>
@@ -1319,7 +1328,8 @@ function updateStatusPanel() {
 }
 
 function animate() {
-  const dt = Math.min(clock.getDelta(), 0.05) * speedMultiplier;
+  const rawDt = Math.min(clock.getDelta(), 0.05);
+  const dt = rawDt * speedMultiplier;
 
   if (!paused) {
     // Auto-spawn nutrients
@@ -1337,6 +1347,7 @@ function animate() {
     }
     updateNutrients(dt);
     updateCreatures(dt);
+    updateFamilyLines();
     elapsedSeconds += dt;
     // Advance game time
     const prevHours = gameHours;
@@ -1352,7 +1363,7 @@ function animate() {
 
   controls.update();
   renderer.render(scene, camera);
-  updateHUD();
+  updateHUD(rawDt);
   if (!document.getElementById('details-overlay').classList.contains('hidden')) {
     refreshDetails();
   }
