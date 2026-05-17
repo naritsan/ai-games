@@ -434,7 +434,6 @@ function updateCreatures(dt) {
         nutrients.splice(nutrients.indexOf(n), 1);
       }
       c.phase += dt * 3;
-      c.satiety -= dt * c.satietyDecay;
       c.mesh.position.copy(c.pos);
       continue;
     }
