@@ -378,11 +378,12 @@ function updateCreatures(dt) {
     }
 
     // ── Eating: contact-based, multi-creature ──────
-    // Find food in contact range (scales with creature size)
-    const eatRange = 0.25 + c.level * 0.05; // bigger creatures have longer reach
+    // Find food in contact range (creature reach + nutrient body radius)
+    const eatRange = 0.25 + c.level * 0.05;
     let touchingFood = null;
     for (const n of nutrients) {
-      if (c.pos.distanceTo(n.pos) < eatRange) {
+      const contactDist = eatRange + NUTRIENT_DEFS[n.size].radius * n.mesh.scale.x;
+      if (c.pos.distanceTo(n.pos) < contactDist) {
         touchingFood = n;
         break;
       }
@@ -574,7 +575,7 @@ function updateCreatures(dt) {
           speed = c.baseSpeed * 1.4 * urgency * speedMod * closeFactor;
           targetAngle = angleToward(c.pos, targetPos);
           c.stateTimer = 0;
-          const seekEatRange = 0.25 + c.level * 0.05;
+          const seekEatRange = 0.25 + c.level * 0.05 + NUTRIENT_DEFS[nearestNutrient.size].radius;
           if (nearestNutrient && dist < seekEatRange) {
             c.foodNoticeAt = 0;
             continue;
