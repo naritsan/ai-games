@@ -339,6 +339,7 @@ function spawnCreature(pos) {
     foodInRange: false,
     creatureInRange: false,
     attackCooldown: 0,
+    radius: 0.2,
     ringMesh,
     reactionTime: 0.2 + Math.random() * 1.3,
     aggression: Math.random(), // 0=docile, 1=fierce
@@ -379,10 +380,9 @@ function updateCreatures(dt) {
 
     // ── Eating: contact-based, multi-creature ──────
     // Find food in contact range (scales with creature size)
-    const eatRange = 0.25 + c.level * 0.05; // bigger creatures have longer reach
     let touchingFood = null;
     for (const n of nutrients) {
-      if (c.pos.distanceTo(n.pos) < eatRange + NUTRIENT_DEFS[n.size].radius) {
+      if (c.pos.distanceTo(n.pos) < c.radius + NUTRIENT_DEFS[n.size].radius) {
         touchingFood = n;
         break;
       }
@@ -721,9 +721,8 @@ function updateCreatures(dt) {
     if (c.state === 'torpor') scale *= 0.6;
     if (c.state === 'frantic') scale *= 1.1 + Math.sin(c.phase * 8) * 0.08;
     c.mesh.scale.setScalar(scale);
-
-    const radius = 0.2 * scale;
-    if (c.pos.y < radius) c.pos.y = radius;
+    c.radius = 0.2 * scale;
+    if (c.pos.y < c.radius) c.pos.y = c.radius;
 
     const t = Math.max(0, Math.min(1, c.energy / c.maxEnergy));
     c.mesh.material.color.setRGB(1 - t, t * 0.85, 0);
