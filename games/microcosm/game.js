@@ -614,6 +614,9 @@ function updateCreatures(dt) {
       }
     }
 
+    // ── Parent-child connection lines ──────────────
+    updateFamilyLines();
+
     // ── Parent-child behavior ──────────────────────
     // Child follows parent until Lv2
     if (c.level < 2 && c.parent && creatures.includes(c.parent)) {
@@ -911,6 +914,30 @@ function pickWanderTarget(c) {
 
 function angleToward(from, to) {
   return Math.atan2(to.z - from.z, to.x - from.x);
+}
+
+// ── Family connection lines ─────────────────────
+const familyLines = [];
+
+function updateFamilyLines() {
+  // Remove all existing lines
+  for (const line of familyLines) scene.remove(line);
+  familyLines.length = 0;
+
+  // Draw lines from children to parents
+  for (const c of creatures) {
+    if (c.parent && creatures.includes(c.parent)) {
+      const points = [
+        new THREE.Vector3(c.pos.x, c.radius + 0.1, c.pos.z),
+        new THREE.Vector3(c.parent.pos.x, c.parent.radius + 0.1, c.parent.pos.z),
+      ];
+      const geo = new THREE.BufferGeometry().setFromPoints(points);
+      const mat = new THREE.LineBasicMaterial({ color: '#88aacc', transparent: true, opacity: 0.4, depthTest: true });
+      const line = new THREE.Line(geo, mat);
+      scene.add(line);
+      familyLines.push(line);
+    }
+  }
 }
 
 // ── Click Interaction ──────────────────────────
