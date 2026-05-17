@@ -339,6 +339,7 @@ function spawnCreature(pos) {
     foodInRange: false,
     creatureInRange: false,
     attackCooldown: 0,
+    radius: 0.2,
     ringMesh,
     reactionTime: 0.2 + Math.random() * 1.3,
     aggression: Math.random(), // 0=docile, 1=fierce
@@ -378,11 +379,10 @@ function updateCreatures(dt) {
     }
 
     // ── Eating: contact-based, sphere-to-sphere ─────
-    const creatureRadius = 0.2 * c.mesh.scale.x;
     let touchingFood = null;
     for (const n of nutrients) {
       const nutrientRadius = NUTRIENT_DEFS[n.size].radius * n.mesh.scale.x;
-      if (c.pos.distanceTo(n.pos) < creatureRadius + nutrientRadius) {
+      if (c.pos.distanceTo(n.pos) < c.radius + nutrientRadius) {
         touchingFood = n;
         break;
       }
@@ -561,7 +561,7 @@ function updateCreatures(dt) {
           speed = c.baseSpeed * 1.4 * urgency * speedMod * closeFactor;
           targetAngle = angleToward(c.pos, targetPos);
           c.stateTimer = 0;
-          const contactD = 0.2 * c.mesh.scale.x + NUTRIENT_DEFS[nearestNutrient.size].radius;
+          const contactD = c.radius + NUTRIENT_DEFS[nearestNutrient.size].radius;
           if (nearestNutrient && dist < contactD) {
             c.foodNoticeAt = 0;
             continue;
@@ -639,9 +639,7 @@ function updateCreatures(dt) {
       if (i === j) continue;
       const other = creatures[j];
       const d = c.pos.distanceTo(other.pos);
-      const cr = 0.2 * c.mesh.scale.x;
-      const or2 = 0.2 * other.mesh.scale.x;
-      const minDist = cr + or2 + 0.05;
+      const minDist = c.radius + other.radius + 0.05;
       if (d < minDist && d > 0.001) {
         const myForce = 1 + c.aggression * 2 + (1 - c.satiety) * 2;
         const theirForce = 1 + other.aggression * 2 + (1 - other.satiety) * 2;
@@ -715,9 +713,8 @@ function updateCreatures(dt) {
     if (c.state === 'torpor') scale *= 0.6;
     if (c.state === 'frantic') scale *= 1.1 + Math.sin(c.phase * 8) * 0.08;
     c.mesh.scale.setScalar(scale);
-
-    const radius = 0.2 * scale;
-    if (c.pos.y < radius) c.pos.y = radius;
+    c.radius = 0.2 * scale;
+    if (c.pos.y < c.radius) c.pos.y = c.radius;
 
     const t = Math.max(0, Math.min(1, c.energy / c.maxEnergy));
     c.mesh.material.color.setRGB(1 - t, t * 0.85, 0);
