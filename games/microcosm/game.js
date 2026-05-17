@@ -334,7 +334,8 @@ function spawnCreature(pos) {
     // Individual traits
     baseSpeed,
     satietyDecay: 0.08 + Math.random() * 0.04, // ~2 game hours to deplete
-    detectRange: 0.6 + Math.random() * 0.6,
+    baseDetectRange: 0.5 + Math.random() * 0.4,
+    detectRange: 0, // set below
     foodInRange: false,
     creatureInRange: false,
     attackCooldown: 0,
@@ -359,7 +360,9 @@ function spawnCreature(pos) {
     satisfiedTimer: 0,
     wanderTarget: null,
   });
-  ringMesh.scale.setScalar(creatures[creatures.length - 1].detectRange);
+  const nc = creatures[creatures.length - 1];
+  nc.detectRange = nc.baseDetectRange * (0.7 + nc.level * 0.3);
+  ringMesh.scale.setScalar(nc.detectRange);
 }
 
 function updateCreatures(dt) {
@@ -427,7 +430,7 @@ function updateCreatures(dt) {
           c.maxHP += 0.2;
           c.maxSatiety += 0.15;
           c.attackDamage += 0.05;
-          c.detectRange += 0.1;
+          c.detectRange = c.baseDetectRange * (0.7 + c.level * 0.3);
           // Update ring scale
           c.ringMesh.scale.setScalar(c.detectRange);
           // Flash effect
