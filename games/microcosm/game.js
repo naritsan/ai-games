@@ -1066,6 +1066,11 @@ document.getElementById('details-close-btn').addEventListener('click', () => {
 });
 
 window.addEventListener('keydown', (e) => {
+  if (e.key === ' ') {
+    e.preventDefault();
+    paused = !paused;
+    document.getElementById('pause-btn').textContent = paused ? 'Resume' : 'Pause';
+  }
   if (e.key === 'Escape') {
     document.getElementById('details-overlay').classList.add('hidden');
   }
