@@ -438,7 +438,18 @@ function updateCreatures(dt) {
         child.ringMesh.scale.setScalar(child.detectRange);
         child.aggression = Math.min(1, Math.max(0, c.aggression + (Math.random() - 0.5) * 0.3));
         child.reactionTime = c.reactionTime * (0.8 + Math.random() * 0.4);
-        child.name = c.name.split('-')[0] + '-' + Math.floor(Math.random() * 99);
+        // Inherit clan name, child gets first name from parent's initial
+        const nameParts = c.name.split(' ');
+        if (nameParts.length >= 2) {
+          // Parent has first+last name: child inherits first letter + random suffix + clan name
+          const initial = nameParts[0][0];
+          const prefix = ['ar', 'ex', 'ip', 'lo', 'ux', 'ee', 'ok', 'ib', 'az', 'el', 'op', 'im', 'ul'];
+          child.name = initial + prefix[Math.floor(Math.random() * prefix.length)] + ' ' + nameParts[1];
+        } else {
+          // Parent is founder (single name): child gets random first name + clan name
+          const firsts = ['Zar', 'Blip', 'Kex', 'Nox', 'Vex', 'Tix', 'Plix', 'Glo', 'Fizz', 'Wrex', 'Miku', 'Zorp', 'Quib', 'Snap', 'Drib'];
+          child.name = firsts[Math.floor(Math.random() * firsts.length)] + ' ' + c.name;
+        }
         child.parent = c;
         if (!c.children) c.children = [];
         c.children.push(child);
