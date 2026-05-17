@@ -330,6 +330,7 @@ function spawnCreature(pos) {
     satietyDecay: 0.08 + Math.random() * 0.04, // ~2 game hours to deplete
     detectRange: 0.6 + Math.random() * 0.6,
     foodInRange: false,
+    creatureInRange: false,
     attackCooldown: 0,
     ringMesh,
     reactionTime: 0.2 + Math.random() * 1.3,
@@ -451,11 +452,13 @@ function updateCreatures(dt) {
       c.state = 'torpor';
     }
 
-    // Check nearby food (simple circular range)
+    // Check nearby food and creatures
     let nearestDist = c.detectRange;
     let nearestNutrient = null;
     let nearestPrey = null;
     c.foodInRange = false;
+    c.creatureInRange = false;
+
     for (const n of nutrients) {
       const dist = c.pos.distanceTo(n.pos);
       if (dist < c.detectRange) c.foodInRange = true;
@@ -465,17 +468,17 @@ function updateCreatures(dt) {
       }
     }
 
-    // Frantic creatures also target other creatures as prey
-    if (c.state === 'frantic') {
-      for (let j = 0; j < creatures.length; j++) {
-        if (i === j) continue;
-        const other = creatures[j];
-        const dist = c.pos.distanceTo(other.pos);
-        if (dist < c.detectRange && dist < nearestDist) {
-          nearestDist = dist;
-          nearestPrey = other;
-          nearestNutrient = null;
-        }
+    // Check for other creatures in range (any state)
+    for (let j = 0; j < creatures.length; j++) {
+      if (i === j) continue;
+      const other = creatures[j];
+      const dist = c.pos.distanceTo(other.pos);
+      if (dist < c.detectRange) c.creatureInRange = true;
+      // Frantic creatures target others as prey
+      if (c.state === 'frantic' && dist < nearestDist) {
+        nearestDist = dist;
+        nearestPrey = other;
+        nearestNutrient = null;
       }
     }
 
@@ -708,8 +711,19 @@ function updateCreatures(dt) {
     // Perception ring — sync position, color
     c.ringMesh.position.x = c.pos.x;
     c.ringMesh.position.z = c.pos.z;
-    c.ringMesh.material.color.set(c.foodInRange ? '#ffaa44' : '#556688');
-    c.ringMesh.material.opacity = c.foodInRange ? 0.45 : 0.15;
+    if (c.creatureInRange && c.state === 'frantic') {
+      c.ringMesh.material.color.set('#ff3333'); // red = prey detected
+      c.ringMesh.material.opacity = 0.5;
+    } else if (c.creatureInRange) {
+      c.ringMesh.material.color.set('#ccccff'); // light blue = other creature nearby
+      c.ringMesh.material.opacity = 0.35;
+    } else if (c.foodInRange) {
+      c.ringMesh.material.color.set('#ffaa44'); // orange = food nearby
+      c.ringMesh.material.opacity = 0.45;
+    } else {
+      c.ringMesh.material.color.set('#556688'); // blue-grey = nothing
+      c.ringMesh.material.opacity = 0.15;
+    }
 
     // HP regen (when not recently hit)
     if (c.age - c.lastHitTime > 2) {
