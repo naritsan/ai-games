@@ -713,8 +713,8 @@ function updateCreatures(dt) {
     } else {
       c.satiety = Math.max(0, c.satiety - dt * c.satietyDecay);
       const hungerMult = c.satiety <= 0 ? 1.5 : 1.0;
-      c.energy -= dt * 0.006 * hungerMult * (elderly ? 1.4 : 1.0);
-      if (speed > 0 && c.state !== 'frantic') c.energy -= dt * speed * 0.0015;
+      c.energy -= dt * 0.003 * hungerMult * (elderly ? 1.3 : 1.0);
+      if (speed > 0 && c.state !== 'frantic') c.energy -= dt * speed * 0.001;
     }
 
     // ── Visual ──────────────────────────────────────
