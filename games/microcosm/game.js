@@ -428,9 +428,10 @@ function updateCreatures(dt) {
         const childPos = new THREE.Vector3(c.pos.x + offset, 0.15, c.pos.z + offset);
         spawnCreature(childPos);
         const child = creatures[creatures.length - 1];
-        // Newborns start weak — need feeding to grow
-        child.energy = 0.25;
-        child.satiety = 0.3;
+        // Newborn starts at full vitality
+        child.energy = child.maxEnergy;
+        child.satiety = child.maxSatiety;
+        child.hp = child.maxHP;
         child.baseSpeed = c.baseSpeed * (0.8 + Math.random() * 0.4);
         child.satietyDecay = c.satietyDecay * (0.8 + Math.random() * 0.4);
         child.baseDetectRange = c.baseDetectRange * (0.8 + Math.random() * 0.4);
