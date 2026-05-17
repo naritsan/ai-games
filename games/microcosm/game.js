@@ -312,6 +312,14 @@ function spawnCreature(pos) {
   ringMesh.position.y = 0.02;
   scene.add(ringMesh);
 
+  // Highlight ring (separate from perception ring)
+  const hlRingGeo = new THREE.TorusGeometry(0.3, 0.04, 8, 24);
+  const hlRingMat = new THREE.MeshBasicMaterial({ color: '#ffff00', transparent: true, opacity: 0, depthWrite: false });
+  const hlRing = new THREE.Mesh(hlRingGeo, hlRingMat);
+  hlRing.rotation.x = -Math.PI / 2;
+  hlRing.position.y = 0.04;
+  mesh.add(hlRing);
+
   // Name label sprite
   const labelCanvas = document.createElement('canvas');
   labelCanvas.width = 128; labelCanvas.height = 32;
@@ -357,6 +365,7 @@ function spawnCreature(pos) {
     attackCooldown: 0,
     radius: 0.2,
     ringMesh,
+    hlRing,
     labelSprite,
     labelCanvas,
     highlighted: false,
@@ -770,12 +779,17 @@ function updateCreatures(dt) {
     // Perception ring — sync position, color
     c.ringMesh.position.x = c.pos.x;
     c.ringMesh.position.z = c.pos.z;
+    // Highlight ring
     if (c.highlighted) {
-      c.ringMesh.material.color.set('#ffff00');
-      c.ringMesh.material.opacity = 0.8;
+      c.hlRing.material.opacity = 0.7 + Math.sin(c.phase * 5) * 0.3;
+      c.hlRing.scale.setScalar(1 + Math.sin(c.phase * 5) * 0.1);
       c.mesh.material.emissiveIntensity = 1.2;
-      scale *= 1.15 + Math.sin(c.phase * 6) * 0.08;
-    } else if (c.creatureInRange && c.state === 'frantic') {
+      scale *= 1.1;
+    } else {
+      c.hlRing.material.opacity = 0;
+    }
+
+    if (c.creatureInRange && c.state === 'frantic') {
       c.ringMesh.material.color.set('#ff3333');
       c.ringMesh.material.opacity = 0.5;
     } else if (c.creatureInRange) {
