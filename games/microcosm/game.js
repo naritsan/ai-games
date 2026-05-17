@@ -767,25 +767,25 @@ function updateCreatures(dt) {
     }
     c.labelSprite.position.y = c.radius + 0.35;
 
-    // Highlight glow
-    if (c.highlighted) {
-      c.mesh.material.emissiveIntensity = 0.8;
-    }
-
     // Perception ring — sync position, color
     c.ringMesh.position.x = c.pos.x;
     c.ringMesh.position.z = c.pos.z;
-    if (c.creatureInRange && c.state === 'frantic') {
-      c.ringMesh.material.color.set('#ff3333'); // red = prey detected
+    if (c.highlighted) {
+      c.ringMesh.material.color.set('#ffff00');
+      c.ringMesh.material.opacity = 0.8;
+      c.mesh.material.emissiveIntensity = 1.2;
+      scale *= 1.15 + Math.sin(c.phase * 6) * 0.08;
+    } else if (c.creatureInRange && c.state === 'frantic') {
+      c.ringMesh.material.color.set('#ff3333');
       c.ringMesh.material.opacity = 0.5;
     } else if (c.creatureInRange) {
-      c.ringMesh.material.color.set('#ccccff'); // light blue = other creature nearby
+      c.ringMesh.material.color.set('#ccccff');
       c.ringMesh.material.opacity = 0.35;
     } else if (c.foodInRange) {
-      c.ringMesh.material.color.set('#ffaa44'); // orange = food nearby
+      c.ringMesh.material.color.set('#ffaa44');
       c.ringMesh.material.opacity = 0.45;
     } else {
-      c.ringMesh.material.color.set('#556688'); // blue-grey = nothing
+      c.ringMesh.material.color.set('#556688');
       c.ringMesh.material.opacity = 0.15;
     }
 
