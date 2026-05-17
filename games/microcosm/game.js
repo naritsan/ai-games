@@ -660,7 +660,8 @@ function updateCreatures(dt) {
 
         // Frantic creatures attack others on contact
         if (c.state === 'frantic' && c.attackCooldown <= 0) {
-          other.hp -= c.attackDamage;
+          const dmg = c.attackDamage * (c.level / Math.max(1, other.level));
+          other.hp -= dmg;
           other.lastHitTime = other.age;
           c.attackCooldown = 0.3;
           // Push victim harder
