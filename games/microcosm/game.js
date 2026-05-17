@@ -875,8 +875,8 @@ function updateCreatures(dt) {
 
     // Death — corpse remains on field as food
     if (c.energy <= 0 || c.hp <= 0) {
-      const corpseEnergy = Math.max(0.2, c.energy);
-      const corpseSatiety = Math.max(0.2, c.satiety);
+      const corpseEnergy = Math.max(0.1, c.energy * 0.4);
+      const corpseSatiety = Math.max(0.1, c.satiety * 0.4);
       const size = corpseEnergy > 0.8 ? 'l' : corpseEnergy > 0.4 ? 'm' : 's';
       // Spawn corpse nutrient at ground level
       const corpsePos = c.pos.clone();
