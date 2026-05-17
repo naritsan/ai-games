@@ -381,6 +381,8 @@ function spawnCreature(pos) {
     labelSprite,
     labelCanvas,
     highlighted: false,
+    parent: null,
+    children: null,
     reactionTime: 0.2 + Math.random() * 1.3,
     aggression: Math.random(), // 0=docile, 1=fierce
     // Growth & lifespan
@@ -427,7 +429,6 @@ function updateCreatures(dt) {
         const offset = (Math.random() - 0.5) * 0.3;
         const childPos = new THREE.Vector3(c.pos.x + offset, 0.15, c.pos.z + offset);
         spawnCreature(childPos);
-        // Mutate child: inherit parent traits with variation
         const child = creatures[creatures.length - 1];
         child.baseSpeed = c.baseSpeed * (0.8 + Math.random() * 0.4);
         child.satietyDecay = c.satietyDecay * (0.8 + Math.random() * 0.4);
@@ -437,6 +438,9 @@ function updateCreatures(dt) {
         child.aggression = Math.min(1, Math.max(0, c.aggression + (Math.random() - 0.5) * 0.3));
         child.reactionTime = c.reactionTime * (0.8 + Math.random() * 0.4);
         child.name = c.name.split('-')[0] + '-' + Math.floor(Math.random() * 99);
+        child.parent = c;
+        if (!c.children) c.children = [];
+        c.children.push(child);
         c.satisfiedTimer = 1;
       }
     }
@@ -607,6 +611,29 @@ function updateCreatures(dt) {
         c.state = 'exploring';
         c.stateTimer = 2;
         c.foodNoticeAt = 0;
+      }
+    }
+
+    // ── Parent-child behavior ──────────────────────
+    // Child follows parent until Lv2
+    if (c.level < 2 && c.parent && creatures.includes(c.parent)) {
+      const distToParent = c.pos.distanceTo(c.parent.pos);
+      if (distToParent > 1.5) {
+        c.wanderTarget = c.parent.pos.clone();
+        c.state = 'exploring';
+      } else if (distToParent < 0.4) {
+        // Stay close but not too close
+        pickWanderTarget(c);
+      }
+    }
+    // Parent stays near children
+    if (c.children && c.children.length > 0) {
+      // Filter dead children
+      c.children = c.children.filter(ch => creatures.includes(ch));
+      // Stay near youngest child
+      const youngest = c.children[c.children.length - 1];
+      if (youngest && c.pos.distanceTo(youngest.pos) > 2.5 && c.state === 'exploring') {
+        c.wanderTarget = youngest.pos.clone();
       }
     }
 
@@ -1172,9 +1199,10 @@ function updateStatusPanel() {
     list.innerHTML = '<div style="color:#666;padding:4px 0">No creatures alive</div>';
     return;
   }
+  // Sort by name
+  const sorted = creatures.map((c, i) => ({ c, i })).sort((a, b) => a.c.name.localeCompare(b.c.name));
   let html = '';
-  for (let i = 0; i < creatures.length; i++) {
-    const c = creatures[i];
+  for (const { c, i } of sorted) {
     const t = Math.max(0, Math.min(1, c.energy / c.maxEnergy));
     const r = Math.floor((1 - t) * 255);
     const g = Math.floor(t * 200);
@@ -1187,12 +1215,14 @@ function updateStatusPanel() {
     const enPct = Math.floor((c.energy / c.maxEnergy) * 100);
     const satPct = Math.floor(c.satiety * 100);
     const hpColor = `rgb(${Math.floor((1 - c.hp) * 255)},${Math.floor(c.hp * 200)},0)`;
-    const enColor = `rgb(${Math.floor((1 - c.energy/1.5) * 255)},${Math.floor((c.energy/1.5) * 200)},0)`;
+    const enColor = `rgb(${Math.floor((1 - c.energy/c.maxEnergy) * 255)},${Math.floor((c.energy/c.maxEnergy) * 200)},0)`;
     const satColor = c.satiety > 0.3 ? '#88bb44' : c.satiety > 0 ? '#ddaa33' : '#dd4433';
+    const parentInfo = c.parent && creatures.includes(c.parent) ? ` ← ${c.parent.name}` : '';
+    const childInfo = c.children && c.children.filter(ch => creatures.includes(ch)).length > 0 ? ` +${c.children.filter(ch => creatures.includes(ch)).length}` : '';
     html += `<div class="creature-row" data-idx="${i}" onclick="window.focusCreature(${i})">
       <div class="creature-dot" style="background:${dotColor};box-shadow:0 0 6px ${dotColor}"></div>
       <div class="creature-stats">
-        <div class="stat-line">${c.name} <span class="stat-label">Lv${c.level} ${stateLabel}</span></div>
+        <div class="stat-line">${c.name}${parentInfo}${childInfo} <span class="stat-label">Lv${c.level} ${stateLabel}</span></div>
         <div class="gauge-row"><span class="gauge-label">HP</span><div class="gauge-bg"><div class="gauge-fill" style="width:${hpPct}%;background:${hpColor}"></div></div><span class="gauge-pct">${hpPct}%</span></div>
         <div class="gauge-row"><span class="gauge-label">EN</span><div class="gauge-bg"><div class="gauge-fill" style="width:${enPct}%;background:${enColor}"></div></div><span class="gauge-pct">${enPct}%</span></div>
         <div class="gauge-row"><span class="gauge-label">SAT</span><div class="gauge-bg"><div class="gauge-fill" style="width:${satPct}%;background:${satColor}"></div></div><span class="gauge-pct">${satPct}%</span></div>
