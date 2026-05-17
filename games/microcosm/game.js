@@ -568,8 +568,7 @@ function updateCreatures(dt) {
       const dist = c.pos.distanceTo(other.pos);
       if (dist < c.detectRange) c.creatureInRange = true;
       // Frantic creatures target others as prey
-      const isFamily2 = (c.parent === other || other.parent === c);
-      if (c.state === 'frantic' && dist < nearestDist && !isFamily2) {
+      if (c.state === 'frantic' && dist < nearestDist && !isKin(c, other)) {
         nearestDist = dist;
         nearestPrey = other;
         nearestNutrient = null;
@@ -751,9 +750,8 @@ function updateCreatures(dt) {
         c.heading += (Math.random() - 0.5) * (c.state === 'frantic' ? 1.5 : 0.5);
 
         // Frantic creatures attack others on contact
-        // No attacking parent or children
-        const isFamily = (c.parent === other || other.parent === c);
-        if (c.state === 'frantic' && c.attackCooldown <= 0 && !isFamily) {
+        // No attacking kin
+        if (c.state === 'frantic' && c.attackCooldown <= 0 && !isKin(c, other)) {
           const dmg = c.attackDamage * (c.level / Math.max(1, other.level));
           other.hp -= dmg;
           other.lastHitTime = other.age;
@@ -916,6 +914,23 @@ function pickWanderTarget(c) {
 
 function angleToward(from, to) {
   return Math.atan2(to.z - from.z, to.x - from.x);
+}
+
+function isKin(a, b) {
+  // Check if any common ancestor in the chain
+  let p = a;
+  while (p) {
+    if (p === b) return true;
+    p = p.parent;
+  }
+  p = b;
+  while (p) {
+    if (p === a) return true;
+    p = p.parent;
+  }
+  // Same parent = siblings
+  if (a.parent && a.parent === b.parent) return true;
+  return false;
 }
 
 // ── Family connection lines ─────────────────────
