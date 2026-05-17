@@ -636,12 +636,11 @@ function updateCreatures(dt) {
           other.pos.z += (other.pos.z - c.pos.z) / d * 0.3;
           // If victim dies, spawn food based on remaining energy
           if (other.hp <= 0) {
-            // Corpse stays on ground (created in death check), attacker gets immediate bite
-            const feedEnergy = Math.min(0.5, other.energy * 0.4);
-            c.energy = Math.min(1.5, c.energy + feedEnergy);
-            c.satiety = Math.min(1.0, c.satiety + feedEnergy * 0.8);
-            c.satisfiedTimer = 1;
-            c.state = 'exploring';
+            // Victim corpse will be created in its death check.
+            // Attacker gets a small immediate feed from the kill.
+            c.energy = Math.min(1.5, c.energy + 0.1);
+            c.satiety = Math.min(1.0, c.satiety + 0.15);
+            c.state = 'exploring'; // corpse nearby, will eat via contact next frame
           }
         }
 
