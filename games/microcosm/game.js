@@ -379,9 +379,8 @@ function updateCreatures(dt) {
     }
 
     // ── Aging ───────────────────────────────────────
-    const elderly = c.age > c.maxAge * 0.8;
     const dying = c.age > c.maxAge;
-    if (dying) c.energy -= dt * 0.06; // rapid decline past maxAge
+    if (dying) c.energy -= dt * 0.04; // decline past maxAge
 
     // ── Eating: contact-based, multi-creature ──────
     // Find food in contact range (scales with creature size)
@@ -452,7 +451,7 @@ function updateCreatures(dt) {
 
     // ── State transitions ──────────────────────────
     const energyRatio = c.energy / c.maxEnergy;
-    const speedMod = elderly ? 0.5 : 1.0;
+    const speedMod = 1.0;
 
     // Torpor: satiety empty + energy critically low → near-death hibernation
     if (c.satiety <= 0 && energyRatio < 0.05 && c.state !== 'torpor' && c.state !== 'eating') {
@@ -713,7 +712,7 @@ function updateCreatures(dt) {
     } else {
       c.satiety = Math.max(0, c.satiety - dt * c.satietyDecay);
       const hungerMult = c.satiety <= 0 ? 1.5 : 1.0;
-      c.energy -= dt * 0.003 * hungerMult * (elderly ? 1.3 : 1.0);
+      c.energy -= dt * 0.003 * hungerMult;
       if (speed > 0 && c.state !== 'frantic') c.energy -= dt * speed * 0.001;
     }
 
