@@ -344,7 +344,6 @@ function spawnCreature(pos) {
     aggression: Math.random(), // 0=docile, 1=fierce
     // Growth & lifespan
     growth: 0.2 + Math.random() * 0.15,
-    maxAge: 80 + Math.random() * 80,
     // Leveling
     level: 1,
     foodEaten: 0,
@@ -377,10 +376,6 @@ function updateCreatures(dt) {
     if (c.energy > 0.8 && c.growth < 1.0) {
       c.growth = Math.min(1.0, c.growth + dt * 0.015);
     }
-
-    // ── Aging ───────────────────────────────────────
-    const dying = c.age > c.maxAge;
-    if (dying) c.energy -= dt * 0.04; // decline past maxAge
 
     // ── Eating: contact-based, multi-creature ──────
     // Find food in contact range (scales with creature size)
@@ -858,7 +853,7 @@ function refreshDetails() {
     const pct = ((c.hp / c.maxHP) * 100).toFixed(0);
     const nrgPct = ((c.energy / c.maxEnergy) * 100).toFixed(0);
     const satPct = ((c.satiety / c.maxSatiety) * 100).toFixed(0);
-    const ageStr = c.age > c.maxAge ? 'Dying' : c.age > c.maxAge * 0.8 ? 'Elderly' : c.growth < 1 ? 'Growing' : 'Adult';
+    const ageStr = c.growth < 1 ? 'Growing' : 'Adult';
     const stateLabel = c.state === 'torpor' ? 'Torpor' : c.state === 'frantic' ? 'Frantic' : c.state === 'lethargic' ? 'Lethargic' : c.satiety <= 0 ? 'Hungry' : c.state.charAt(0).toUpperCase() + c.state.slice(1);
     html += `<div class="detail-card">
       <div class="detail-header">
@@ -870,7 +865,7 @@ function refreshDetails() {
         <div>HP <span>${pct}%</span></div>
         <div>Energy <span>${nrgPct}%</span></div>
         <div>Satiety <span>${satPct}%</span></div>
-        <div>Age <span>${Math.floor(c.age)}s / ${Math.floor(c.maxAge)}s</span></div>
+        <div>Age <span>${Math.floor(c.age)}s</span></div>
         <div>Growth <span>${(c.growth * 100).toFixed(0)}%</span></div>
         <div>Stage <span>${ageStr}</span></div>
         <div>State <span>${stateLabel}</span></div>
