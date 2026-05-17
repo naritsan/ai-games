@@ -378,11 +378,11 @@ function updateCreatures(dt) {
       c.growth = Math.min(1.0, c.growth + dt * 0.015);
     }
 
-    // ── Eating: contact-based, sphere-to-sphere ─────
+    // ── Eating: contact-based ──────────────────────
+    const eatRange = 0.35;
     let touchingFood = null;
     for (const n of nutrients) {
-      const nutrientRadius = NUTRIENT_DEFS[n.size].radius * n.mesh.scale.x;
-      if (c.pos.distanceTo(n.pos) < c.radius + nutrientRadius) {
+      if (c.pos.distanceTo(n.pos) < eatRange) {
         touchingFood = n;
         break;
       }
@@ -561,7 +561,7 @@ function updateCreatures(dt) {
           speed = c.baseSpeed * 1.4 * urgency * speedMod * closeFactor;
           targetAngle = angleToward(c.pos, targetPos);
           c.stateTimer = 0;
-          const contactD = c.radius + NUTRIENT_DEFS[nearestNutrient.size].radius;
+          const contactD = 0.4;
           if (nearestNutrient && dist < contactD) {
             c.foodNoticeAt = 0;
             continue;
@@ -639,7 +639,7 @@ function updateCreatures(dt) {
       if (i === j) continue;
       const other = creatures[j];
       const d = c.pos.distanceTo(other.pos);
-      const minDist = c.radius + other.radius + 0.05;
+      const minDist = 0.55;
       if (d < minDist && d > 0.001) {
         const myForce = 1 + c.aggression * 2 + (1 - c.satiety) * 2;
         const theirForce = 1 + other.aggression * 2 + (1 - other.satiety) * 2;
