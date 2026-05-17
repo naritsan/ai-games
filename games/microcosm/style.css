@@ -44,18 +44,22 @@ canvas {
 }
 
 #title {
-  font-size: 20px;
+  font-size: 24px;
   font-weight: 700;
-  letter-spacing: 0.05em;
-  color: #b8d8e8;
-  text-shadow: 0 0 12px rgba(40, 180, 255, 0.3);
+  letter-spacing: 0.06em;
+  color: #d0e8f8;
+  text-shadow: 0 0 16px rgba(40, 180, 255, 0.5);
 }
 
 #info {
-  font-size: 13px;
-  color: #888;
+  font-size: 15px;
+  color: #ccc;
   text-align: right;
-  line-height: 1.4;
+  line-height: 1.5;
+  text-shadow: 0 0 6px rgba(0, 0, 0, 0.8);
+  background: rgba(10, 20, 30, 0.6);
+  padding: 4px 10px;
+  border-radius: 6px;
 }
 
 #palette {
@@ -98,28 +102,81 @@ canvas {
   box-shadow: 0 0 8px rgba(68, 136, 204, 0.3);
 }
 
+/* ── Popup Menus (Speed & Food Size) ─────────── */
+#speed-wrap, #foodsize-wrap {
+  position: relative;
+}
+
+#speed-popup, #foodsize-popup {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: rgba(10, 20, 30, 0.95);
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 8px;
+  padding: 6px;
+  backdrop-filter: blur(12px);
+}
+
+.popup-row {
+  display: flex;
+  gap: 4px;
+}
+
+#speed-popup.hidden, #foodsize-popup.hidden {
+  display: none;
+}
+
+.speed-opt {
+  padding: 6px 14px;
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 5px;
+  background: transparent;
+  color: #aaa;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.12s;
+}
+
+.speed-opt:hover {
+  border-color: rgba(255,255,255,0.4);
+  color: #fff;
+}
+
+.speed-opt.active {
+  border-color: #ffaa44;
+  color: #ffaa44;
+  box-shadow: 0 0 6px rgba(255, 170, 68, 0.3);
+}
+
 #status-panel {
   position: fixed;
   top: 60px;
   right: 16px;
   pointer-events: auto;
-  background: rgba(10, 20, 30, 0.85);
+  background: rgba(10, 20, 30, 0.9);
   backdrop-filter: blur(8px);
-  border: 1px solid rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.2);
   border-radius: 8px;
   padding: 12px 16px;
-  min-width: 180px;
+  min-width: 220px;
   max-height: 60vh;
   overflow-y: auto;
-  font-size: 12px;
+  font-size: 13px;
   z-index: 20;
 }
 
 #status-title {
   font-weight: 700;
-  color: #b8d8e8;
+  color: #d0e8f8;
   margin-bottom: 8px;
-  font-size: 13px;
+  font-size: 14px;
+  text-shadow: 0 0 6px rgba(40, 180, 255, 0.3);
 }
 
 .creature-row {
@@ -128,6 +185,12 @@ canvas {
   gap: 8px;
   padding: 4px 0;
   border-bottom: 1px solid rgba(255,255,255,0.06);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.creature-row:hover {
+  background: rgba(255,255,255,0.06);
 }
 
 .creature-row:last-child {
@@ -142,8 +205,74 @@ canvas {
 }
 
 .creature-stats {
+  color: #ccc;
+  line-height: 1.5;
+  font-weight: 500;
+  flex: 1;
+  min-width: 0;
+}
+
+.stat-line {
+  font-size: 12px;
+  margin-bottom: 2px;
+}
+
+.stat-label {
+  font-size: 10px;
+  color: #888;
+  margin-left: 4px;
+}
+
+.focus-btn {
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 3px;
   color: #aaa;
-  line-height: 1.4;
+  cursor: pointer;
+  font-size: 10px;
+  padding: 0 4px;
+  margin-right: 2px;
+  vertical-align: middle;
+}
+
+.focus-btn:hover {
+  background: rgba(255,255,255,0.25);
+  color: #fff;
+}
+
+.gauge-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+}
+
+.gauge-label {
+  color: #888;
+  width: 22px;
+  flex-shrink: 0;
+}
+
+.gauge-bg {
+  flex: 1;
+  height: 5px;
+  background: rgba(255,255,255,0.08);
+  border-radius: 3px;
+  overflow: hidden;
+  min-width: 30px;
+}
+
+.gauge-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.3s;
+}
+
+.gauge-pct {
+  color: #aaa;
+  width: 32px;
+  text-align: right;
+  flex-shrink: 0;
 }
 
 /* ── Details Overlay ─────────────────────────── */
