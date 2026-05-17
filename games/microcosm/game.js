@@ -414,7 +414,6 @@ function updateCreatures(dt) {
         c.satisfiedTimer = 1 + Math.random() * 1.5;
         c.wanderTarget = null;
         c.foodNoticeAt = 0;
-        // Leveling progress
         c.foodEaten += n.maxEnergy;
         while (c.foodEaten >= c.foodToNext) {
           c.foodEaten -= c.foodToNext;
@@ -425,18 +424,20 @@ function updateCreatures(dt) {
           c.maxSatiety += 0.15;
           c.attackDamage += 0.05;
           c.detectRange = c.baseDetectRange * (0.7 + c.level * 0.3);
-          // Update ring scale
           c.ringMesh.scale.setScalar(c.detectRange);
-          // Flash effect
           c.eatFlash = 0.8;
         }
         scene.remove(n.mesh);
         nutrients.splice(nutrients.indexOf(n), 1);
+        c.state = 'exploring';
+        c.stateTimer = 2 + Math.random() * 3;
+        // Fall through to normal update (no continue)
+      } else {
+        c.phase += dt * 3;
+        c.satiety -= dt * c.satietyDecay;
+        c.mesh.position.copy(c.pos);
+        continue;
       }
-      c.phase += dt * 3;
-      c.satiety -= dt * c.satietyDecay;
-      c.mesh.position.copy(c.pos);
-      continue;
     }
 
     if (c.state === 'eating') {
