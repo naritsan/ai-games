@@ -1123,9 +1123,7 @@ function updateStatusPanel() {
     const hpColor = `rgb(${Math.floor((1 - c.hp) * 255)},${Math.floor(c.hp * 200)},0)`;
     const enColor = `rgb(${Math.floor((1 - c.energy/1.5) * 255)},${Math.floor((c.energy/1.5) * 200)},0)`;
     const satColor = c.satiety > 0.3 ? '#88bb44' : c.satiety > 0 ? '#ddaa33' : '#dd4433';
-    html += `<div class="creature-row" data-idx="${i}"
-      onmouseenter="creatures[${i}].highlighted=true"
-      onmouseleave="creatures[${i}].highlighted=false">
+    html += `<div class="creature-row" data-idx="${i}">
       <div class="creature-dot" style="background:${dotColor};box-shadow:0 0 6px ${dotColor}"></div>
       <div class="creature-stats">
         <div class="stat-line">${c.name} <span class="stat-label">Lv${c.level} ${stateLabel}</span></div>
@@ -1136,6 +1134,13 @@ function updateStatusPanel() {
     </div>`;
   }
   list.innerHTML = html;
+
+  // Hover highlight delegation
+  list.querySelectorAll('.creature-row').forEach(row => {
+    const idx = parseInt(row.dataset.idx);
+    row.addEventListener('mouseenter', () => { creatures[idx].highlighted = true; });
+    row.addEventListener('mouseleave', () => { creatures[idx].highlighted = false; });
+  });
 }
 
 function animate() {
