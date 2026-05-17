@@ -917,25 +917,32 @@ function angleToward(from, to) {
 }
 
 // ── Family connection lines ─────────────────────
-const familyLines = [];
+const familyLines = new Map(); // child creature → line object
 
 function updateFamilyLines() {
-  // Remove all existing lines
-  for (const line of familyLines) scene.remove(line);
-  familyLines.length = 0;
-
-  // Draw lines from children to parents
+  // Remove lines for dead children or broken parent links
+  for (const [child, line] of familyLines) {
+    if (!creatures.includes(child) || !creatures.includes(child.parent)) {
+      scene.remove(line);
+      familyLines.delete(child);
+    }
+  }
+  // Create lines for new parent-child pairs, update existing
   for (const c of creatures) {
     if (c.parent && creatures.includes(c.parent)) {
-      const points = [
-        new THREE.Vector3(c.pos.x, c.radius + 0.1, c.pos.z),
-        new THREE.Vector3(c.parent.pos.x, c.parent.radius + 0.1, c.parent.pos.z),
-      ];
-      const geo = new THREE.BufferGeometry().setFromPoints(points);
-      const mat = new THREE.LineBasicMaterial({ color: '#88aacc', transparent: true, opacity: 0.4, depthTest: true });
-      const line = new THREE.Line(geo, mat);
-      scene.add(line);
-      familyLines.push(line);
+      let line = familyLines.get(c);
+      if (!line) {
+        const geo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]);
+        const mat = new THREE.LineBasicMaterial({ color: '#88aacc', transparent: true, opacity: 0.4, depthTest: true });
+        line = new THREE.Line(geo, mat);
+        scene.add(line);
+        familyLines.set(c, line);
+      }
+      // Update positions
+      const pos = line.geometry.attributes.position;
+      pos.setXYZ(0, c.pos.x, c.radius + 0.1, c.pos.z);
+      pos.setXYZ(1, c.parent.pos.x, c.parent.radius + 0.1, c.parent.pos.z);
+      pos.needsUpdate = true;
     }
   }
 }
