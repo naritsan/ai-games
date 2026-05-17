@@ -419,7 +419,7 @@ function updateCreatures(dt) {
     }
 
     // ── Reproduction (division) ────────────────────
-    if (c.energy >= c.maxEnergy * 0.95 && c.satiety > 0.5 && c.hp > 0.5 && creatures.length < 20) {
+    if (c.level >= 2 && c.energy >= c.maxEnergy * 0.95 && c.satiety > 0.5 && c.hp > 0.5) {
       if (Math.random() < dt * 0.08) { // ~8% chance per second
         c.energy *= 0.5;
         c.satiety *= 0.7;
