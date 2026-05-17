@@ -312,13 +312,24 @@ function spawnCreature(pos) {
   ringMesh.position.y = 0.02;
   scene.add(ringMesh);
 
-  // Highlight ring (separate from perception ring)
-  const hlRingGeo = new THREE.TorusGeometry(0.3, 0.04, 8, 24);
-  const hlRingMat = new THREE.MeshBasicMaterial({ color: '#ffff00', transparent: true, opacity: 0, depthWrite: false });
-  const hlRing = new THREE.Mesh(hlRingGeo, hlRingMat);
-  hlRing.rotation.x = -Math.PI / 2;
-  hlRing.position.y = 0.04;
-  mesh.add(hlRing);
+  // Highlight glow disc on ground
+  const hlCanvas = document.createElement('canvas');
+  hlCanvas.width = hlCanvas.height = 64;
+  const hlctx = hlCanvas.getContext('2d');
+  const gradient = hlctx.createRadialGradient(32, 32, 0, 32, 32, 32);
+  gradient.addColorStop(0, 'rgba(255,255,200,0.9)');
+  gradient.addColorStop(0.3, 'rgba(255,255,100,0.5)');
+  gradient.addColorStop(0.7, 'rgba(255,200,0,0.1)');
+  gradient.addColorStop(1, 'rgba(255,200,0,0)');
+  hlctx.fillStyle = gradient;
+  hlctx.fillRect(0, 0, 64, 64);
+  const hlTex = new THREE.CanvasTexture(hlCanvas);
+  const hlDiscGeo = new THREE.PlaneGeometry(0.8, 0.8);
+  const hlDiscMat = new THREE.MeshBasicMaterial({ map: hlTex, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending });
+  const hlDisc = new THREE.Mesh(hlDiscGeo, hlDiscMat);
+  hlDisc.rotation.x = -Math.PI / 2;
+  hlDisc.position.y = 0.02;
+  mesh.add(hlDisc);
 
   // Name label sprite
   const labelCanvas = document.createElement('canvas');
@@ -365,7 +376,7 @@ function spawnCreature(pos) {
     attackCooldown: 0,
     radius: 0.2,
     ringMesh,
-    hlRing,
+    hlDisc,
     labelSprite,
     labelCanvas,
     highlighted: false,
@@ -779,14 +790,14 @@ function updateCreatures(dt) {
     // Perception ring — sync position, color
     c.ringMesh.position.x = c.pos.x;
     c.ringMesh.position.z = c.pos.z;
-    // Highlight ring
+    // Highlight disc
     if (c.highlighted) {
-      c.hlRing.material.opacity = 0.7 + Math.sin(c.phase * 5) * 0.3;
-      c.hlRing.scale.setScalar(1 + Math.sin(c.phase * 5) * 0.1);
+      c.hlDisc.material.opacity = 0.6 + Math.sin(c.phase * 4) * 0.3;
+      c.hlDisc.scale.setScalar(0.9 + Math.sin(c.phase * 4) * 0.15);
       c.mesh.material.emissiveIntensity = 1.2;
       scale *= 1.1;
     } else {
-      c.hlRing.material.opacity = 0;
+      c.hlDisc.material.opacity = 0;
     }
 
     if (c.creatureInRange && c.state === 'frantic') {
