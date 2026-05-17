@@ -1100,6 +1100,21 @@ function updateHUD() {
   updateStatusPanel();
 }
 
+// Status panel click → highlight creature
+let selectedCreature = -1;
+document.getElementById('status-list').addEventListener('click', (e) => {
+  const row = e.target.closest('.creature-row');
+  if (!row) return;
+  const idx = parseInt(row.dataset.idx);
+  creatures.forEach(c2 => c2.highlighted = false);
+  if (selectedCreature !== idx) {
+    creatures[idx].highlighted = true;
+    selectedCreature = idx;
+  } else {
+    selectedCreature = -1;
+  }
+});
+
 function updateStatusPanel() {
   const list = document.getElementById('status-list');
   if (creatures.length === 0) {
@@ -1134,13 +1149,6 @@ function updateStatusPanel() {
     </div>`;
   }
   list.innerHTML = html;
-
-  // Hover highlight delegation
-  list.querySelectorAll('.creature-row').forEach(row => {
-    const idx = parseInt(row.dataset.idx);
-    row.addEventListener('mouseenter', () => { creatures[idx].highlighted = true; });
-    row.addEventListener('mouseleave', () => { creatures[idx].highlighted = false; });
-  });
 }
 
 function animate() {
