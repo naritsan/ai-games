@@ -338,6 +338,14 @@ function spawnCreature(pos) {
     // Growth & lifespan
     growth: 0.2 + Math.random() * 0.15,
     maxAge: 80 + Math.random() * 80,
+    // Leveling
+    level: 1,
+    foodEaten: 0,
+    foodToNext: 1.0,
+    maxEnergy: 1.5,
+    maxHP: 1.0,
+    maxSatiety: 1.0,
+    attackDamage: 0.25,
     // State
     state: 'exploring',
     stateTimer: 2 + Math.random() * 3,
@@ -389,12 +397,12 @@ function updateCreatures(dt) {
       // Award energy in ticks
       const prevProgress = n.eatProgress - eatRate;
       if (Math.floor(n.eatProgress * 4) > Math.floor(prevProgress * 4)) {
-        c.energy = Math.min(1.5, c.energy + n.maxEnergy * 0.25);
-        c.satiety = Math.min(1.0, c.satiety + n.maxSatiety * 0.25);
+        c.energy = Math.min(c.maxEnergy, c.energy + n.maxEnergy * 0.25);
+        c.satiety = Math.min(c.maxSatiety, c.satiety + n.maxSatiety * 0.25);
         c.eatFlash = 0.3;
       }
       // Pulse while eating
-      const gs = 0.5 + c.growth * 0.7;
+      const gs = (0.5 + c.growth * 0.7) * (0.8 + c.level * 0.2);
       const es = 0.7 + c.energy * 0.4;
       const pulse = 1 + Math.sin(c.phase * 6) * 0.06;
       c.mesh.scale.setScalar(gs * es * pulse);
@@ -402,6 +410,22 @@ function updateCreatures(dt) {
         c.satisfiedTimer = 1 + Math.random() * 1.5;
         c.wanderTarget = null;
         c.foodNoticeAt = 0;
+        // Leveling progress
+        c.foodEaten += n.maxEnergy;
+        while (c.foodEaten >= c.foodToNext) {
+          c.foodEaten -= c.foodToNext;
+          c.level++;
+          c.foodToNext *= 1.6;
+          c.maxEnergy += 0.3;
+          c.maxHP += 0.2;
+          c.maxSatiety += 0.15;
+          c.attackDamage += 0.05;
+          c.detectRange += 0.1;
+          // Update ring scale
+          c.ringMesh.scale.setScalar(c.detectRange);
+          // Flash effect
+          c.eatFlash = 0.8;
+        }
         scene.remove(n.mesh);
         nutrients.splice(nutrients.indexOf(n), 1);
       }
@@ -417,7 +441,7 @@ function updateCreatures(dt) {
     }
 
     // ── State transitions ──────────────────────────
-    const energyRatio = c.energy / 1.5;
+    const energyRatio = c.energy / c.maxEnergy;
     const speedMod = elderly ? 0.5 : 1.0;
 
     // Torpor: satiety empty + energy critically low → near-death hibernation
@@ -631,7 +655,7 @@ function updateCreatures(dt) {
 
         // Frantic creatures attack others on contact
         if (c.state === 'frantic' && c.attackCooldown <= 0) {
-          other.hp -= 0.25;
+          other.hp -= c.attackDamage;
           other.lastHitTime = other.age;
           c.attackCooldown = 0.3;
           // Push victim harder
@@ -641,8 +665,8 @@ function updateCreatures(dt) {
           if (other.hp <= 0) {
             // Victim corpse will be created in its death check.
             // Attacker gets a small immediate feed from the kill.
-            c.energy = Math.min(1.5, c.energy + 0.1);
-            c.satiety = Math.min(1.0, c.satiety + 0.15);
+            c.energy = Math.min(c.maxEnergy, c.energy + 0.1);
+            c.satiety = Math.min(c.maxSatiety, c.satiety + 0.15);
             c.state = 'exploring'; // corpse nearby, will eat via contact next frame
           }
         }
@@ -683,7 +707,7 @@ function updateCreatures(dt) {
     }
 
     // ── Visual ──────────────────────────────────────
-    const growthSize = 0.5 + c.growth * 0.7;
+    const growthSize = (0.5 + c.growth * 0.7) * (0.8 + c.level * 0.2);
     const energyScale = 0.7 + c.energy * 0.4;
     const flashBoost = c.eatFlash > 0 ? 1 + c.eatFlash * 0.5 : 1;
     let scale = growthSize * energyScale * flashBoost;
@@ -695,7 +719,7 @@ function updateCreatures(dt) {
     const radius = 0.2 * scale;
     if (c.pos.y < radius) c.pos.y = radius;
 
-    const t = Math.max(0, Math.min(1, c.energy / 1.5));
+    const t = Math.max(0, Math.min(1, c.energy / c.maxEnergy));
     c.mesh.material.color.setRGB(1 - t, t * 0.85, 0);
     c.mesh.material.emissive.setRGB((1 - t) * 0.3, t * 0.22, 0);
     if (c.state === 'frantic') {
@@ -727,7 +751,7 @@ function updateCreatures(dt) {
 
     // HP regen (when not recently hit)
     if (c.age - c.lastHitTime > 2) {
-      c.hp = Math.min(1.0, c.hp + dt * 0.15);
+      c.hp = Math.min(c.maxHP, c.hp + dt * 0.15);
     }
 
     // Death — corpse remains on field as food
@@ -818,11 +842,12 @@ function refreshDetails() {
   let html = '';
   for (let i = 0; i < creatures.length; i++) {
     const c = creatures[i];
-    const hpR = Math.floor((1 - c.hp) * 255);
-    const hpG = Math.floor(c.hp * 200);
-    const pct = (c.hp * 100).toFixed(0);
-    const nrgPct = (c.energy * 100).toFixed(0);
-    const satPct = (c.satiety * 100).toFixed(0);
+    const hpRatio = c.hp / c.maxHP;
+    const hpR = Math.floor((1 - hpRatio) * 255);
+    const hpG = Math.floor(hpRatio * 200);
+    const pct = ((c.hp / c.maxHP) * 100).toFixed(0);
+    const nrgPct = ((c.energy / c.maxEnergy) * 100).toFixed(0);
+    const satPct = ((c.satiety / c.maxSatiety) * 100).toFixed(0);
     const ageStr = c.age > c.maxAge ? 'Dying' : c.age > c.maxAge * 0.8 ? 'Elderly' : c.growth < 1 ? 'Growing' : 'Adult';
     const stateLabel = c.state === 'torpor' ? 'Torpor' : c.state === 'frantic' ? 'Frantic' : c.state === 'lethargic' ? 'Lethargic' : c.satiety <= 0 ? 'Hungry' : c.state.charAt(0).toUpperCase() + c.state.slice(1);
     html += `<div class="detail-card">
@@ -831,6 +856,7 @@ function refreshDetails() {
         <div class="detail-name">Creature #${i + 1}</div>
       </div>
       <div class="detail-grid">
+        <div>Level <span>${c.level}</span></div>
         <div>HP <span>${pct}%</span></div>
         <div>Energy <span>${nrgPct}%</span></div>
         <div>Satiety <span>${satPct}%</span></div>
@@ -1036,15 +1062,16 @@ function updateStatusPanel() {
   let html = '';
   for (let i = 0; i < creatures.length; i++) {
     const c = creatures[i];
-    const t = Math.max(0, Math.min(1, c.energy / 1.5));
+    const t = Math.max(0, Math.min(1, c.energy / c.maxEnergy));
     const r = Math.floor((1 - t) * 255);
     const g = Math.floor(t * 200);
-    const hpR = Math.floor((1 - c.hp) * 255);
-    const hpG = Math.floor(c.hp * 200);
+    const hpRatio = c.hp / c.maxHP;
+    const hpR = Math.floor((1 - hpRatio) * 255);
+    const hpG = Math.floor(hpRatio * 200);
     const dotColor = `rgb(${hpR},${hpG},0)`;
     const stateLabel = c.state === 'torpor' ? 'TOR' : c.state === 'frantic' ? 'FRN' : c.state === 'lethargic' ? 'LET' : c.state === 'eating' ? 'EAT' : c.state === 'resting' ? 'RST' : '';
-    const hpPct = Math.floor(c.hp * 100);
-    const enPct = Math.floor((c.energy / 1.5) * 100);
+    const hpPct = Math.floor((c.hp / c.maxHP) * 100);
+    const enPct = Math.floor((c.energy / c.maxEnergy) * 100);
     const satPct = Math.floor(c.satiety * 100);
     const hpColor = `rgb(${Math.floor((1 - c.hp) * 255)},${Math.floor(c.hp * 200)},0)`;
     const enColor = `rgb(${Math.floor((1 - c.energy/1.5) * 255)},${Math.floor((c.energy/1.5) * 200)},0)`;
@@ -1052,7 +1079,7 @@ function updateStatusPanel() {
     html += `<div class="creature-row">
       <div class="creature-dot" style="background:${dotColor};box-shadow:0 0 6px ${dotColor}"></div>
       <div class="creature-stats">
-        <div class="stat-line">#${i + 1} <span class="stat-label">${stateLabel}</span></div>
+        <div class="stat-line">#${i + 1} <span class="stat-label">Lv${c.level} ${stateLabel}</span></div>
         <div class="gauge-row"><span class="gauge-label">HP</span><div class="gauge-bg"><div class="gauge-fill" style="width:${hpPct}%;background:${hpColor}"></div></div><span class="gauge-pct">${hpPct}%</span></div>
         <div class="gauge-row"><span class="gauge-label">EN</span><div class="gauge-bg"><div class="gauge-fill" style="width:${enPct}%;background:${enColor}"></div></div><span class="gauge-pct">${enPct}%</span></div>
         <div class="gauge-row"><span class="gauge-label">SAT</span><div class="gauge-bg"><div class="gauge-fill" style="width:${satPct}%;background:${satColor}"></div></div><span class="gauge-pct">${satPct}%</span></div>
