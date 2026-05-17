@@ -648,7 +648,7 @@ function updateCreatures(dt) {
       if (i === j) continue;
       const other = creatures[j];
       const d = c.pos.distanceTo(other.pos);
-      const minDist = 0.4 + c.level * 0.06;
+      const minDist = c.radius + other.radius + 0.05;
       if (d < minDist && d > 0.001) {
         const myForce = 1 + c.aggression * 2 + (1 - c.satiety) * 2;
         const theirForce = 1 + other.aggression * 2 + (1 - other.satiety) * 2;
