@@ -421,10 +421,9 @@ function updateCreatures(dt) {
     }
 
     // ── Reproduction (division) ────────────────────
-    if (c.level >= 2 && c.energy >= c.maxEnergy * 0.95 && c.satiety > 0.5 && c.hp > 0.5) {
+    if (c.level >= 2 && c.energy >= c.maxEnergy * 0.3 && c.hp > 0.5) {
       if (Math.random() < dt * 0.16) { // ~16% chance per second
-        c.energy *= 0.5;
-        c.satiety *= 0.7;
+        c.energy *= 0.9;
         // Child spawns nearby with mutated traits
         const offset = (Math.random() - 0.5) * 0.3;
         const childPos = new THREE.Vector3(c.pos.x + offset, 0.15, c.pos.z + offset);
