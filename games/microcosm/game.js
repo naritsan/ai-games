@@ -418,6 +418,29 @@ function updateCreatures(dt) {
       c.growth = Math.min(1.0, c.growth + dt * 0.015);
     }
 
+    // ── Reproduction (division) ────────────────────
+    if (c.energy >= c.maxEnergy * 0.95 && c.satiety > 0.5 && c.hp > 0.5 && creatures.length < 20) {
+      if (Math.random() < dt * 0.08) { // ~8% chance per second
+        c.energy *= 0.5;
+        c.satiety *= 0.7;
+        // Child spawns nearby with mutated traits
+        const offset = (Math.random() - 0.5) * 0.3;
+        const childPos = new THREE.Vector3(c.pos.x + offset, 0.15, c.pos.z + offset);
+        spawnCreature(childPos);
+        // Mutate child: inherit parent traits with variation
+        const child = creatures[creatures.length - 1];
+        child.baseSpeed = c.baseSpeed * (0.8 + Math.random() * 0.4);
+        child.satietyDecay = c.satietyDecay * (0.8 + Math.random() * 0.4);
+        child.baseDetectRange = c.baseDetectRange * (0.8 + Math.random() * 0.4);
+        child.detectRange = child.baseDetectRange * (0.7 + child.level * 0.3);
+        child.ringMesh.scale.setScalar(child.detectRange);
+        child.aggression = Math.min(1, Math.max(0, c.aggression + (Math.random() - 0.5) * 0.3));
+        child.reactionTime = c.reactionTime * (0.8 + Math.random() * 0.4);
+        child.name = c.name.split('-')[0] + '-' + Math.floor(Math.random() * 99);
+        c.satisfiedTimer = 1;
+      }
+    }
+
     // ── Eating: contact-based, multi-creature ──────
     // Find food in contact range (scales with creature size)
     let touchingFood = null;
