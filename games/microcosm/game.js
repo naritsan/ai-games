@@ -312,6 +312,22 @@ function spawnCreature(pos) {
   ringMesh.position.y = 0.02;
   scene.add(ringMesh);
 
+  // Name label sprite
+  const labelCanvas = document.createElement('canvas');
+  labelCanvas.width = 128; labelCanvas.height = 32;
+  const lctx = labelCanvas.getContext('2d');
+  lctx.font = '14px system-ui, sans-serif';
+  lctx.textAlign = 'center';
+  lctx.fillStyle = '#ffffff';
+  lctx.fillText('...', 64, 18);
+  const labelTex = new THREE.CanvasTexture(labelCanvas);
+  labelTex.minFilter = THREE.LinearFilter;
+  const labelSpriteMat = new THREE.SpriteMaterial({ map: labelTex, transparent: true, depthTest: false, depthWrite: false });
+  const labelSprite = new THREE.Sprite(labelSpriteMat);
+  labelSprite.scale.set(1.2, 0.3, 1);
+  labelSprite.position.y = 0.5;
+  mesh.add(labelSprite);
+
   // Generate unique name
   const prefixes = ['Zar', 'Blip', 'Kex', 'Nox', 'Vex', 'Tix', 'Plix', 'Glo', 'Fizz', 'Wrex', 'Miku', 'Zorp', 'Quib', 'Snap', 'Drib'];
   const suffixes = ['o', 'a', 'ix', 'ex', 'ar', 'ul', 'een', 'ok', 'ip', 'ax', 'u', 'el', 'os', 'im', 'ee'];
@@ -341,6 +357,9 @@ function spawnCreature(pos) {
     attackCooldown: 0,
     radius: 0.2,
     ringMesh,
+    labelSprite,
+    labelCanvas,
+    highlighted: false,
     reactionTime: 0.2 + Math.random() * 1.3,
     aggression: Math.random(), // 0=docile, 1=fierce
     // Growth & lifespan
@@ -736,6 +755,23 @@ function updateCreatures(dt) {
     c.mesh.material.opacity = c.state === 'torpor' ? 0.4 : 1;
     c.mesh.material.transparent = c.state === 'torpor';
 
+    // Name label update (throttled)
+    if (Math.floor(c.age * 4) !== Math.floor((c.age - dt) * 4)) {
+      const lctx = c.labelCanvas.getContext('2d');
+      lctx.clearRect(0, 0, 128, 32);
+      lctx.font = '14px system-ui, sans-serif';
+      lctx.textAlign = 'center';
+      lctx.fillStyle = c.highlighted ? '#ffff44' : '#ffffff';
+      lctx.fillText(c.name, 64, 18);
+      c.labelSprite.material.map.needsUpdate = true;
+    }
+    c.labelSprite.position.y = c.radius + 0.35;
+
+    // Highlight glow
+    if (c.highlighted) {
+      c.mesh.material.emissiveIntensity = 0.8;
+    }
+
     // Perception ring — sync position, color
     c.ringMesh.position.x = c.pos.x;
     c.ringMesh.position.z = c.pos.z;
@@ -1087,7 +1123,9 @@ function updateStatusPanel() {
     const hpColor = `rgb(${Math.floor((1 - c.hp) * 255)},${Math.floor(c.hp * 200)},0)`;
     const enColor = `rgb(${Math.floor((1 - c.energy/1.5) * 255)},${Math.floor((c.energy/1.5) * 200)},0)`;
     const satColor = c.satiety > 0.3 ? '#88bb44' : c.satiety > 0 ? '#ddaa33' : '#dd4433';
-    html += `<div class="creature-row">
+    html += `<div class="creature-row" data-idx="${i}"
+      onmouseenter="creatures[${i}].highlighted=true"
+      onmouseleave="creatures[${i}].highlighted=false">
       <div class="creature-dot" style="background:${dotColor};box-shadow:0 0 6px ${dotColor}"></div>
       <div class="creature-stats">
         <div class="stat-line">${c.name} <span class="stat-label">Lv${c.level} ${stateLabel}</span></div>
