@@ -381,10 +381,11 @@ function updateCreatures(dt) {
     if (dying) c.energy -= dt * 0.06; // rapid decline past maxAge
 
     // ── Eating: contact-based, multi-creature ──────
-    // Find food in contact range (before eating check, so any state can eat)
+    // Find food in contact range (scales with creature size)
+    const eatRange = 0.25 + c.level * 0.05; // bigger creatures have longer reach
     let touchingFood = null;
     for (const n of nutrients) {
-      if (c.pos.distanceTo(n.pos) < 0.45) {
+      if (c.pos.distanceTo(n.pos) < eatRange) {
         touchingFood = n;
         break;
       }
@@ -576,7 +577,8 @@ function updateCreatures(dt) {
           speed = c.baseSpeed * 1.4 * urgency * speedMod * closeFactor;
           targetAngle = angleToward(c.pos, targetPos);
           c.stateTimer = 0;
-          if (nearestNutrient && dist < 0.45) {
+          const seekEatRange = 0.25 + c.level * 0.05;
+          if (nearestNutrient && dist < seekEatRange) {
             c.foodNoticeAt = 0;
             continue;
           }
@@ -649,7 +651,7 @@ function updateCreatures(dt) {
       if (i === j) continue;
       const other = creatures[j];
       const d = c.pos.distanceTo(other.pos);
-      const minDist = 0.5;
+      const minDist = 0.4 + c.level * 0.06;
       if (d < minDist && d > 0.001) {
         const myForce = 1 + c.aggression * 2 + (1 - c.satiety) * 2;
         const theirForce = 1 + other.aggression * 2 + (1 - other.satiety) * 2;
