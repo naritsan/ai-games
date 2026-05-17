@@ -1094,10 +1094,15 @@ function timePeriod(h) {
   return 'Night';
 }
 
+let statusUpdateTimer = 0;
 function updateHUD() {
   document.getElementById('info').textContent =
     `Day ${dayCount} | ${formatTime(gameHours)} (${timePeriod(gameHours)}) | Creatures: ${creatures.length}`;
-  updateStatusPanel();
+  statusUpdateTimer += 0.016;
+  if (statusUpdateTimer > 0.5) {
+    updateStatusPanel();
+    statusUpdateTimer = 0;
+  }
 }
 
 // Global focus function for status panel buttons
