@@ -1102,10 +1102,11 @@ function updateHUD() {
 
 // Status panel click → highlight creature
 let selectedCreature = -1;
-document.getElementById('status-list').addEventListener('click', (e) => {
+document.getElementById('status-panel').addEventListener('click', (e) => {
   const row = e.target.closest('.creature-row');
   if (!row) return;
   const idx = parseInt(row.dataset.idx);
+  if (isNaN(idx) || idx >= creatures.length) return;
   creatures.forEach(c2 => c2.highlighted = false);
   if (selectedCreature !== idx) {
     creatures[idx].highlighted = true;
