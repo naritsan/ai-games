@@ -1166,10 +1166,10 @@ function updateStatusPanel() {
     const hpColor = `rgb(${Math.floor((1 - c.hp) * 255)},${Math.floor(c.hp * 200)},0)`;
     const enColor = `rgb(${Math.floor((1 - c.energy/1.5) * 255)},${Math.floor((c.energy/1.5) * 200)},0)`;
     const satColor = c.satiety > 0.3 ? '#88bb44' : c.satiety > 0 ? '#ddaa33' : '#dd4433';
-    html += `<div class="creature-row" data-idx="${i}">
+    html += `<div class="creature-row" data-idx="${i}" onclick="window.focusCreature(${i})">
       <div class="creature-dot" style="background:${dotColor};box-shadow:0 0 6px ${dotColor}"></div>
       <div class="creature-stats">
-        <div class="stat-line">${c.name} <button class="focus-btn" onclick="window.focusCreature(${i})">◎</button> <span class="stat-label">Lv${c.level} ${stateLabel}</span></div>
+        <div class="stat-line">${c.name} <span class="stat-label">Lv${c.level} ${stateLabel}</span></div>
         <div class="gauge-row"><span class="gauge-label">HP</span><div class="gauge-bg"><div class="gauge-fill" style="width:${hpPct}%;background:${hpColor}"></div></div><span class="gauge-pct">${hpPct}%</span></div>
         <div class="gauge-row"><span class="gauge-label">EN</span><div class="gauge-bg"><div class="gauge-fill" style="width:${enPct}%;background:${enColor}"></div></div><span class="gauge-pct">${enPct}%</span></div>
         <div class="gauge-row"><span class="gauge-label">SAT</span><div class="gauge-bg"><div class="gauge-fill" style="width:${satPct}%;background:${satColor}"></div></div><span class="gauge-pct">${satPct}%</span></div>
