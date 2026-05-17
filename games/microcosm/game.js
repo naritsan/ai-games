@@ -1111,6 +1111,14 @@ let speedIdx = 2; // default: ×1
 let speedMultiplier = SPEED_OPTIONS[speedIdx];
 let elapsedSeconds = 0;
 
+// Auto-spawn toggle
+let autoSpawn = false;
+let autoSpawnTimer = 0;
+document.getElementById('auto-spawn-btn').addEventListener('click', () => {
+  autoSpawn = !autoSpawn;
+  document.getElementById('auto-spawn-btn').textContent = autoSpawn ? 'Auto: ON' : 'Auto: OFF';
+});
+
 // Sprinkle
 document.getElementById('sprinkle-btn').addEventListener('click', () => {
   for (let i = 0; i < foodCount; i++) {
@@ -1313,6 +1321,19 @@ function animate() {
   const dt = Math.min(clock.getDelta(), 0.05) * speedMultiplier;
 
   if (!paused) {
+    // Auto-spawn nutrients
+    if (autoSpawn) {
+      autoSpawnTimer += dt;
+      if (autoSpawnTimer > 3) {
+        autoSpawnTimer = 0;
+        const p = new THREE.Vector3(
+          (Math.random() - 0.5) * (ARENA_HALF * 2 - 1),
+          1.5 + Math.random() * 1.0,
+          (Math.random() - 0.5) * (ARENA_HALF * 2 - 1)
+        );
+        spawnNutrient(p, randomNutrientSize());
+      }
+    }
     updateNutrients(dt);
     updateCreatures(dt);
     elapsedSeconds += dt;
