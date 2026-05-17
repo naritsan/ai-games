@@ -312,8 +312,14 @@ function spawnCreature(pos) {
   ringMesh.position.y = 0.02;
   scene.add(ringMesh);
 
+  // Generate unique name
+  const prefixes = ['Zar', 'Blip', 'Kex', 'Nox', 'Vex', 'Tix', 'Plix', 'Glo', 'Fizz', 'Wrex', 'Miku', 'Zorp', 'Quib', 'Snap', 'Drib'];
+  const suffixes = ['o', 'a', 'ix', 'ex', 'ar', 'ul', 'een', 'ok', 'ip', 'ax', 'u', 'el', 'os', 'im', 'ee'];
+  const name = prefixes[Math.floor(Math.random() * prefixes.length)] + suffixes[Math.floor(Math.random() * suffixes.length)] + '-' + Math.floor(Math.random() * 99);
+
   const baseSpeed = 0.5 + Math.random() * 0.7;
   creatures.push({
+    name,
     pos: pos.clone(),
     heading: Math.random() * Math.PI * 2,
     energy: 1.0,
@@ -853,7 +859,7 @@ function refreshDetails() {
     html += `<div class="detail-card">
       <div class="detail-header">
         <div class="creature-dot" style="background:rgb(${hpR},${hpG},0);box-shadow:0 0 8px rgb(${hpR},${hpG},0)"></div>
-        <div class="detail-name">Creature #${i + 1}</div>
+        <div class="detail-name" style="cursor:pointer" title="Click to rename" onclick="this.contentEditable='true';this.focus();this.onblur=()=>{this.contentEditable='false';window._renameCreature(${i},this.textContent)}">${c.name}</div>
       </div>
       <div class="detail-grid">
         <div>Level <span>${c.level}</span></div>
@@ -871,6 +877,13 @@ function refreshDetails() {
   }
   body.innerHTML = html;
 }
+
+// Global rename handler for details overlay
+window._renameCreature = function(idx, newName) {
+  if (idx >= 0 && idx < creatures.length && newName.trim()) {
+    creatures[idx].name = newName.trim();
+  }
+};
 
 document.getElementById('details-btn').addEventListener('click', () => {
   refreshDetails();
@@ -1079,7 +1092,7 @@ function updateStatusPanel() {
     html += `<div class="creature-row">
       <div class="creature-dot" style="background:${dotColor};box-shadow:0 0 6px ${dotColor}"></div>
       <div class="creature-stats">
-        <div class="stat-line">#${i + 1} <span class="stat-label">Lv${c.level} ${stateLabel}</span></div>
+        <div class="stat-line">${c.name} <span class="stat-label">Lv${c.level} ${stateLabel}</span></div>
         <div class="gauge-row"><span class="gauge-label">HP</span><div class="gauge-bg"><div class="gauge-fill" style="width:${hpPct}%;background:${hpColor}"></div></div><span class="gauge-pct">${hpPct}%</span></div>
         <div class="gauge-row"><span class="gauge-label">EN</span><div class="gauge-bg"><div class="gauge-fill" style="width:${enPct}%;background:${enColor}"></div></div><span class="gauge-pct">${enPct}%</span></div>
         <div class="gauge-row"><span class="gauge-label">SAT</span><div class="gauge-bg"><div class="gauge-fill" style="width:${satPct}%;background:${satColor}"></div></div><span class="gauge-pct">${satPct}%</span></div>
