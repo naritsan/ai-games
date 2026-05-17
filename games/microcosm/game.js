@@ -1100,21 +1100,17 @@ function updateHUD() {
   updateStatusPanel();
 }
 
-// Status panel click → highlight creature
+// Global focus function for status panel buttons
 let selectedCreature = -1;
-document.getElementById('status-panel').addEventListener('click', (e) => {
-  const row = e.target.closest('.creature-row');
-  if (!row) return;
-  const idx = parseInt(row.dataset.idx);
-  if (isNaN(idx) || idx >= creatures.length) return;
+window.focusCreature = function(idx) {
   creatures.forEach(c2 => c2.highlighted = false);
   if (selectedCreature !== idx) {
-    creatures[idx].highlighted = true;
+    if (creatures[idx]) creatures[idx].highlighted = true;
     selectedCreature = idx;
   } else {
     selectedCreature = -1;
   }
-});
+};
 
 function updateStatusPanel() {
   const list = document.getElementById('status-list');
@@ -1142,7 +1138,7 @@ function updateStatusPanel() {
     html += `<div class="creature-row" data-idx="${i}">
       <div class="creature-dot" style="background:${dotColor};box-shadow:0 0 6px ${dotColor}"></div>
       <div class="creature-stats">
-        <div class="stat-line">${c.name} <span class="stat-label">Lv${c.level} ${stateLabel}</span></div>
+        <div class="stat-line">${c.name} <button class="focus-btn" onclick="window.focusCreature(${i})">◎</button> <span class="stat-label">Lv${c.level} ${stateLabel}</span></div>
         <div class="gauge-row"><span class="gauge-label">HP</span><div class="gauge-bg"><div class="gauge-fill" style="width:${hpPct}%;background:${hpColor}"></div></div><span class="gauge-pct">${hpPct}%</span></div>
         <div class="gauge-row"><span class="gauge-label">EN</span><div class="gauge-bg"><div class="gauge-fill" style="width:${enPct}%;background:${enColor}"></div></div><span class="gauge-pct">${enPct}%</span></div>
         <div class="gauge-row"><span class="gauge-label">SAT</span><div class="gauge-bg"><div class="gauge-fill" style="width:${satPct}%;background:${satColor}"></div></div><span class="gauge-pct">${satPct}%</span></div>

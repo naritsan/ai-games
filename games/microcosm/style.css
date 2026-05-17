@@ -223,6 +223,23 @@ canvas {
   margin-left: 4px;
 }
 
+.focus-btn {
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 3px;
+  color: #aaa;
+  cursor: pointer;
+  font-size: 10px;
+  padding: 0 4px;
+  margin-right: 2px;
+  vertical-align: middle;
+}
+
+.focus-btn:hover {
+  background: rgba(255,255,255,0.25);
+  color: #fff;
+}
+
 .gauge-row {
   display: flex;
   align-items: center;
